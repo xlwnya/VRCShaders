@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2021 whiteflare.
+ *  Copyright 2018-2022 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -44,6 +44,9 @@
     #define PICK_VERT_TEX2D_LOD(tex, uv, lod)           tex2Dlod(tex, float4(uv.x, uv.y, 0, lod))
 #endif
 
+    #define DECL_GRAB_TEX2D(name)                       UNITY_DECLARE_SCREENSPACE_TEXTURE(name)
+    #define PICK_GRAB_TEX2D(tex, uv)                    UNITY_SAMPLE_SCREENSPACE_TEXTURE(tex, uv)
+
     ////////////////////////////
     // Compatible
     ////////////////////////////
@@ -83,19 +86,35 @@
 #endif
     }
 
+    float3 calcPointLightWorldDir(float3 ws_light_pos, float3 ws_vertex) {
+        ws_vertex = ws_light_pos - ws_vertex;
+        if (dot(ws_vertex, ws_vertex) < 0.000001) {
+            ws_vertex = float3(0, 1, 0);    // 至近距離ならば+Y方向を返却する
+        }
+        return normalize( ws_vertex );
+    }
+
+    float3 calcPointLight1WorldDir(float3 ws_vertex) {
+#ifdef VERTEXLIGHT_ON
+        float3 ws_lightPos = getPoint1LightPos();
+        if (any(ws_lightPos)) {
+            return calcPointLightWorldDir(ws_lightPos, ws_vertex);
+        }
+#endif
+        return float3(0, 0, 0); // ポイントライトが無いときは 0, 0, 0 を返す
+    }
+
     float3 samplePoint1LightColor(float3 ws_vertex) {
 #ifdef VERTEXLIGHT_ON
         float3 ws_lightPos = getPoint1LightPos();
-        if (ws_lightPos.x == 0 && ws_lightPos.y == 0 && ws_lightPos.z == 0) {
-            return float3(0, 0, 0); // XYZすべて0はポイントライト未設定と判定する
+        if (any(ws_lightPos)) {
+            float3 ls_lightPos = ws_lightPos - ws_vertex;
+            float lengthSq = dot(ls_lightPos, ls_lightPos);
+            float atten = 1.0 / (1.0 + lengthSq * unity_4LightAtten0.x);
+            return unity_LightColor[0].rgb * atten;
         }
-        float3 ls_lightPos = ws_lightPos - ws_vertex;
-        float lengthSq = dot(ls_lightPos, ls_lightPos);
-        float atten = 1.0 / (1.0 + lengthSq * unity_4LightAtten0.x);
-        return unity_LightColor[0].rgb * atten;
-#else
-        return float3(0, 0, 0);
 #endif
+        return float3(0, 0, 0); // ポイントライトが無いときは 0, 0, 0 を返す
     }
 
     float3 OmniDirectional_Shade4PointLights(

@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2021 whiteflare.
+ *  Copyright 2018-2022 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -140,6 +140,13 @@ namespace UnlitWF
                 new WFShaderFunction("NM", "NM", "NormalMap"),
                 new WFShaderFunction("MT", "MT", "Metallic"),
                 new WFShaderFunction("HL", "HL", "Light Matcap"),
+                new WFShaderFunction("HA", "HL_1", "Light Matcap 2", (self, mat) => WFShaderFunction.IsEnable("_HL_Enable_1", mat)),
+                new WFShaderFunction("HB", "HL_2", "Light Matcap 3", (self, mat) => WFShaderFunction.IsEnable("_HL_Enable_2", mat)),
+                new WFShaderFunction("HC", "HL_3", "Light Matcap 4", (self, mat) => WFShaderFunction.IsEnable("_HL_Enable_3", mat)),
+                new WFShaderFunction("HD", "HL_4", "Light Matcap 5", (self, mat) => WFShaderFunction.IsEnable("_HL_Enable_4", mat)),
+                new WFShaderFunction("HE", "HL_5", "Light Matcap 6", (self, mat) => WFShaderFunction.IsEnable("_HL_Enable_5", mat)),
+                new WFShaderFunction("HF", "HL_6", "Light Matcap 7", (self, mat) => WFShaderFunction.IsEnable("_HL_Enable_6", mat)),
+                new WFShaderFunction("HG", "HL_7", "Light Matcap 8", (self, mat) => WFShaderFunction.IsEnable("_HL_Enable_7", mat)),
                 new WFShaderFunction("LM", "LM", "Lame"),
                 new WFShaderFunction("SH", "TS", "ToonShade"),
                 new WFShaderFunction("RM", "TR", "RimLight"),
@@ -182,10 +189,11 @@ namespace UnlitWF
         /// </summary>
         public static readonly Dictionary<string, WFCustomKeywordSetting> SpecialPropNameToKeywordMap = new Dictionary<string, WFCustomKeywordSetting>() {
             { "_UseVertexColor", new WFCustomKeywordSettingBool("_UseVertexColor", "_VC_ENABLE") },
+            { "_GL_LightMode", new WFCustomKeywordSettingEnum("_GL_LightMode", "_GL_AUTO_ENABLE", "_GL_ONLYDIR_ENABLE", "_GL_ONLYPOINT_ENABLE", "_GL_WSDIR_ENABLE", "_GL_LSDIR_ENABLE", "_GL_WSPOS_ENABLE") },
             { "_TL_LineType", new WFCustomKeywordSettingBool("_TL_LineType", "_TL_EDGE_ENABLE") {
                 enablePropName = "_TL_Enable",
             } },
-            { "_MT_CubemapType", new WFCustomKeywordSettingEnum("_MT_CubemapType", "_", "_MT_ADD2ND_ENABLE", "_MT_ONLY2ND_ENABLE") {
+            { "_MT_CubemapType", new WFCustomKeywordSettingEnum("_MT_CubemapType", "_", "_", "_MT_ONLY2ND_ENABLE") {
                 enablePropName = "_MT_Enable",
             } },
             { "_NM_2ndType", new WFCustomKeywordSettingEnum("_NM_2ndType", "_", "_NM_BL2ND_ENABLE", "_NM_SW2ND_ENABLE") {
@@ -196,6 +204,9 @@ namespace UnlitWF
             } },
             { "_ES_Shape", new WFCustomKeywordSettingEnum("_ES_Shape", "_ES_SCROLL_ENABLE", "_ES_SCROLL_ENABLE", "_ES_SCROLL_ENABLE", "_") {
                 enablePropName = "_ES_Enable",
+            } },
+            { "_TS_FixContrast", new WFCustomKeywordSettingEnum("_TS_FixContrast", "_", "_TS_FIXC_ENABLE") {
+                enablePropName = "_TS_Enable",
             } },
         };
 
@@ -280,6 +291,7 @@ namespace UnlitWF
             new WFI18NTranslation("NM", "Shadow Power", "影の濃さ"),
             new WFI18NTranslation("NM", "Flip Mirror", "ミラーXY反転").AddTag("FR"),
             new WFI18NTranslation("NM", "2nd Normal Blend", "2ndマップの混合タイプ"),
+            new WFI18NTranslation("NM", "2nd Normal UV Type", "2ndマップのUVタイプ"),
             new WFI18NTranslation("NM", "2nd NormalMap Texture", "2ndノーマルマップ"),
             new WFI18NTranslation("NM", "2nd Bump Scale", "凹凸スケール"),
             new WFI18NTranslation("NM", "2nd NormalMap Mask Texture", "2ndノーマルのマスク"),
@@ -302,7 +314,8 @@ namespace UnlitWF
             new WFI18NTranslation("HL", "Matcap Tint Color", "matcap色調整").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
             new WFI18NTranslation("HL", "Parallax", "視差(Parallax)").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
             new WFI18NTranslation("HL", "Power", "matcap強度").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
-            new WFI18NTranslation("HL", "Change Alpha Transparency", "透明度も反映する"),
+            new WFI18NTranslation("HL", "Change Alpha Transparency", "透明度も反映する").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
+            new WFI18NTranslation("HL", "Matcap Monochrome", "matcapモノクロ化").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
             // Lame
             new WFI18NTranslation("LM", "Color", "ラメ色・テクスチャ"),
             new WFI18NTranslation("LM", "Texture", "ラメ色・テクスチャ"),
@@ -331,6 +344,7 @@ namespace UnlitWF
             new WFI18NTranslation("SH", "Anti-Shadow Mask Texture (R)", "アンチシャドウマスク (R)"),
             new WFI18NTranslation("SH", "Shade Color Suggest", "影色を自動設定する"),
             new WFI18NTranslation("SH", "Align the boundaries equally", "境界を等間隔に整列"),
+            new WFI18NTranslation("SH", "Dont Ajust Contrast", "影コントラストを調整しない"),
             // RimLight
             new WFI18NTranslation("RM", "Rim Color", "リムライト色"),
             new WFI18NTranslation("RM", "Power", "強度(マスター)"),
@@ -386,6 +400,7 @@ namespace UnlitWF
             new WFI18NTranslation("Sun Source", "太陽光のモード"),
             new WFI18NTranslation("Custom Sun Azimuth", "カスタム太陽の方角"),
             new WFI18NTranslation("Custom Sun Altitude", "カスタム太陽の高度"),
+            new WFI18NTranslation("Custom Light Pos", "カスタムライトの位置"),
             new WFI18NTranslation("Disable BackLit", "逆光補正しない"),
             new WFI18NTranslation("Disable ObjectBasePos", "メッシュ原点を取得しない"),
             // Light Bake Effects
@@ -411,7 +426,10 @@ namespace UnlitWF
             new WFI18NTranslation("FR", "Fur Height (Cutout)", "高さ (Cutout側)"),
             new WFI18NTranslation("FR", "Fur Height (Transparent)", "高さ (Transparent側)"),
             new WFI18NTranslation("FR", "Fur Vector", "方向"),
+            new WFI18NTranslation("FR", "Fur Vector Randomize", "方向のランダム化"),
             new WFI18NTranslation("FR", "Fur Repeat", "ファーの枚数"),
+            new WFI18NTranslation("FR", "Fur Repeat (Cutout)", "ファーの枚数 (Cutout側)"),
+            new WFI18NTranslation("FR", "Fur Repeat (Transparent)", "ファーの枚数 (Transparent側)"),
             new WFI18NTranslation("FR", "Fur ShadowPower", "影の強さ"),
             new WFI18NTranslation("FR", "Tint Color (Base)", "色調整 (根元)"),
             new WFI18NTranslation("FR", "Tint Color (Tip)", "色調整 (先端)"),
@@ -534,6 +552,7 @@ namespace UnlitWF
             new WFI18NTranslation("NM", "Shadow Power", "그림자 강도"),
             new WFI18NTranslation("NM", "Flip Mirror", "거울 XY 반전").AddTag("FR"),
             new WFI18NTranslation("NM", "2nd Normal Blend", "2nd맵 혼합"),
+            new WFI18NTranslation("NM", "2nd Normal UV Type", "2nd맵 UV타입"),
             new WFI18NTranslation("NM", "2nd NormalMap Texture", "2nd노멀맵"),
             new WFI18NTranslation("NM", "2nd Bump Scale", "2nd범프 스케일"),
             new WFI18NTranslation("NM", "2nd NormalMap Mask Texture", "2nd노멀 텍스처"),
@@ -556,7 +575,8 @@ namespace UnlitWF
             new WFI18NTranslation("HL", "Matcap Tint Color", "matcap 색상 조절").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
             new WFI18NTranslation("HL", "Parallax", "시차값(Parallax)").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
             new WFI18NTranslation("HL", "Power", "matcap 강도").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
-            new WFI18NTranslation("HL", "Change Alpha Transparency", "알파값 반영"),
+            new WFI18NTranslation("HL", "Change Alpha Transparency", "알파값 반영").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
+            new WFI18NTranslation("HL", "Matcap Monochrome", "matcap 단색화").AddTag("HA", "HB", "HC", "HD", "HE", "HF", "HG"),
             // Lame
             new WFI18NTranslation("LM", "Color", "LM색상・텍스처"),
             new WFI18NTranslation("LM", "Texture", "LM색상・텍스처"),
@@ -585,6 +605,7 @@ namespace UnlitWF
             new WFI18NTranslation("SH", "Anti-Shadow Mask Texture (R)", "안티 그림자 마스크 (R)"),
             new WFI18NTranslation("SH", "Shade Color Suggest", "그림자 자동 설정"),
             new WFI18NTranslation("SH", "Align the boundaries equally", "경계값 동일 정렬 "),
+            new WFI18NTranslation("SH", "Dont Ajust Contrast", "그림자 콘트라스트를 조정하지 않는다"),
             // RimLight
             new WFI18NTranslation("RM", "Rim Color", "림라이트 색상"),
             new WFI18NTranslation("RM", "Power", "강도(최대)"),
@@ -640,6 +661,7 @@ namespace UnlitWF
             new WFI18NTranslation("Sun Source", "태양광 모드"),
             new WFI18NTranslation("Custom Sun Azimuth", "커스텀 태양광 방향"),
             new WFI18NTranslation("Custom Sun Altitude", "커스텀 태양광 고도"),
+            new WFI18NTranslation("Custom Light Pos", "커스텀 라이트의 위치"),
             new WFI18NTranslation("Disable BackLit", "역광 무보정"),
             new WFI18NTranslation("Disable ObjectBasePos", "매쉬의 원점을 취득하지 않음"),
             // Light Bake Effects
@@ -665,7 +687,10 @@ namespace UnlitWF
             new WFI18NTranslation("FR", "Fur Height (Cutout)", "Fur 높이 (Cutout)"),
             new WFI18NTranslation("FR", "Fur Height (Transparent)", "Fur 높이 (Transparent)"),
             new WFI18NTranslation("FR", "Fur Vector", "Fur 방향"),
+            new WFI18NTranslation("FR", "Fur Vector Randomize", "Fur 방향 랜덤"),
             new WFI18NTranslation("FR", "Fur Repeat", "Fur 개수"),
+            new WFI18NTranslation("FR", "Fur Repeat (Cutout)", "Fur 개수 (Cutout)"),
+            new WFI18NTranslation("FR", "Fur Repeat (Transparent)", "Fur 개수 (Transparent)"),
             new WFI18NTranslation("FR", "Fur ShadowPower", "Fur 강도"),
             new WFI18NTranslation("FR", "Tint Color (Base)", "색조절 (뿌리 부분)"),
             new WFI18NTranslation("FR", "Tint Color (Tip)", "색조절 (끝 부분)"),

@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2021 whiteflare.
+ *  Copyright 2018-2022 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -57,6 +57,8 @@ namespace UnlitWF
             new ConditionVisiblePropertyHook("_HL_MedianColor(_[0-9]+)?", ctx => IsAnyIntValue(ctx, ctx.current.name.Replace("_MedianColor", "_CapType"), p => p == 0)), // MEDIAN_CAP
             new ConditionVisiblePropertyHook("_.+_BlendNormal(_.+)?", ctx => IsAnyIntValue(ctx, "_NM_Enable", p => p != 0)),
             new ConditionVisiblePropertyHook("_ES_Direction|_ES_DirType|_ES_LevelOffset|_ES_Sharpness|_ES_Speed|_ES_AlphaScroll", ctx => IsAnyIntValue(ctx, "_ES_Shape", p => p != 3)), // not CONSTANT
+            new ConditionVisiblePropertyHook("_GL_CustomAzimuth|_GL_CustomAltitude", ctx => IsAnyIntValue(ctx, "_GL_LightMode", p => p != 5)),
+            new ConditionVisiblePropertyHook("_GL_CustomLitPos", ctx => IsAnyIntValue(ctx, "_GL_LightMode", p => p == 5)),
 
             // テクスチャとカラーを1行で表示する
             new SingleLineTexPropertyHook( "_TS_BaseColor", "_TS_BaseTex" ),
@@ -98,6 +100,22 @@ namespace UnlitWF
                     CompareAndSet(ctx.all, "_AL_Source", 0, 1); // MAIN_TEX_ALPHA -> MASK_TEX_RED
                 }
             }),
+            new DefValueSetPropertyHook("_HL_MatcapTex(_[0-9]+)?", ctx => {
+                if (ctx.current.textureValue != null) {
+                    var name = ctx.current.textureValue.name;
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        if (name.StartsWith("lcap_", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            CompareAndSet(ctx.all, ctx.current.name.Replace("_MatcapTex", "_CapType"), 0, 1); // MCAP -> LCAP
+                        }
+                        else if (name.StartsWith("mcap_", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            CompareAndSet(ctx.all, ctx.current.name.Replace("_MatcapTex", "_CapType"), 1, 0); // LCAP -> MCAP
+                        }
+                    }
+                }
+            }),
 
             // _DetailNormalMap と _FR_NoiseTex の直後に設定ボタンを追加する
             new CustomPropertyHook("_DetailNormalMap|_FR_NoiseTex", null, (ctx, changed) => {
@@ -126,14 +144,15 @@ namespace UnlitWF
                 EditorGUILayout.HelpBox(WFI18N.Translate(WFMessageText.PsAntiShadowMask), MessageType.Info);
             }),
             // _HL_MatcapColor の後に説明文を追加する
-            new CustomPropertyHook("_HL_MatcapColor", null, (ctx, changed) => {
-                if (IsAnyIntValue(ctx, "_HL_CapType", p => p == 0)) {
+            new CustomPropertyHook("_HL_MatcapColor(_[0-9]+)?", null, (ctx, changed) => {
+                var name = ctx.current.name.Replace("_MatcapColor", "_CapType");
+                if (IsAnyIntValue(ctx, name, p => p == 0)) {
                     EditorGUILayout.HelpBox(WFI18N.Translate(WFMessageText.PsCapTypeMedian), MessageType.Info);
                 }
-                if (IsAnyIntValue(ctx, "_HL_CapType", p => p == 1)) {
+                if (IsAnyIntValue(ctx, name, p => p == 1)) {
                     EditorGUILayout.HelpBox(WFI18N.Translate(WFMessageText.PsCapTypeLight), MessageType.Info);
                 }
-                if (IsAnyIntValue(ctx, "_HL_CapType", p => p == 2)) {
+                if (IsAnyIntValue(ctx, name, p => p == 2)) {
                     EditorGUILayout.HelpBox(WFI18N.Translate(WFMessageText.PsCapTypeShade), MessageType.Info);
                 }
             }),
@@ -227,6 +246,22 @@ namespace UnlitWF
                         {
                             val = 0.2f;
                             material.SetFloat("_Cutoff", val);
+                        }
+                    }
+                }
+                else
+                {
+                    // UnlitWFからの切替時に動作
+                    if (oldShader.name.Contains("FakeFur") && newShader.name.Contains("FakeFur"))
+                    {
+                        // FakeFurどうしの切り替えで、
+                        if (!oldShader.name.Contains("_Mix") && newShader.name.Contains("_Mix"))
+                        {
+                            // Mixへの切り替えならば、FR_Height2とFR_Repeat2を設定する
+                            var height = material.GetFloat("_FR_Height");
+                            material.SetFloat("_FR_Height2", height * 1.25f);
+                            var repeat = material.GetInt("_FR_Repeat");
+                            material.SetInt("_FR_Repeat2", Math.Max(1, repeat - 1));
                         }
                     }
                 }
@@ -685,13 +720,21 @@ namespace UnlitWF
 
         private static void SuggestShadowColor(Material[] mats)
         {
+            Undo.RecordObjects(mats, "shade color change");
+
             foreach (var m in mats)
             {
-                Undo.RecordObject(m, "shade color change");
                 // ベース色を取得
                 Color baseColor = m.GetColor("_TS_BaseColor");
                 float hur, sat, val;
                 Color.RGBToHSV(baseColor, out hur, out sat, out val);
+
+                // もし val が 0.7 未満ならばベース色を明るめに再設定する
+                if (val < 0.7f)
+                {
+                    val = 0.7f;
+                    m.SetColor("_TS_BaseColor", Color.HSVToRGB(hur, sat, val));
+                }
 
                 // 段数を取得
                 var steps = GetShadowStepsFromMaterial(m);
@@ -701,6 +744,16 @@ namespace UnlitWF
                         if (m.HasProperty("_TS_1stColor"))
                         {
                             m.SetColor("_TS_1stColor", Color.HSVToRGB(ShiftHur(hur, sat, 0.4f), sat + 0.15f, val * 0.8f));
+                        }
+                        break;
+                    default:
+                        if (m.HasProperty("_TS_1stColor"))
+                        {
+                            m.SetColor("_TS_1stColor", Color.HSVToRGB(ShiftHur(hur, sat, 0.6f), sat + 0.1f, val * 0.9f));
+                        }
+                        if (m.HasProperty("_TS_2ndColor"))
+                        {
+                            m.SetColor("_TS_2ndColor", Color.HSVToRGB(ShiftHur(hur, sat, 0.4f), sat + 0.15f, val * 0.8f));
                         }
                         break;
                     case 3:
@@ -717,25 +770,16 @@ namespace UnlitWF
                             m.SetColor("_TS_3rdColor", Color.HSVToRGB(ShiftHur(hur, sat, 0.4f), sat + 0.15f, val * 0.7f));
                         }
                         break;
-                    default:
-                        if (m.HasProperty("_TS_1stColor"))
-                        {
-                            m.SetColor("_TS_1stColor", Color.HSVToRGB(ShiftHur(hur, sat, 0.6f), sat + 0.1f, val * 0.9f));
-                        }
-                        if (m.HasProperty("_TS_2ndColor"))
-                        {
-                            m.SetColor("_TS_2ndColor", Color.HSVToRGB(ShiftHur(hur, sat, 0.4f), sat + 0.15f, val * 0.8f));
-                        }
-                        break;
                 }
             }
         }
 
         private static void SuggestShadowBorder(Material[] mats)
         {
+            Undo.RecordObjects(mats, "shade border change");
+
             foreach (var m in mats)
             {
-                Undo.RecordObject(m, "shade border change");
                 // 段数を取得
                 var steps = GetShadowStepsFromMaterial(m);
                 // 1影
@@ -806,6 +850,8 @@ namespace UnlitWF
             // SurikenStyleHeader
             var style = new GUIStyle("ShurikenModuleTitle");
             style.font = EditorStyles.boldLabel.font;
+            style.fontSize += 2;
+            style.fontStyle = FontStyle.Bold;
             style.fixedHeight = 20;
             style.contentOffset = new Vector2(20, -2);
             // Draw
@@ -836,6 +882,8 @@ namespace UnlitWF
             // SurikenStyleHeader
             var style = new GUIStyle("ShurikenModuleTitle");
             style.font = EditorStyles.boldLabel.font;
+            style.fontSize += 2;
+            style.fontStyle = FontStyle.Bold;
             style.fixedHeight = 20;
             style.contentOffset = new Vector2(20, -2);
             // Draw
@@ -901,8 +949,17 @@ namespace UnlitWF
         /// <param name="propTexture"></param>
         public static void DrawSingleLineTextureProperty(MaterialEditor materialEditor, GUIContent label, MaterialProperty propColor, MaterialProperty propTexture)
         {
+            EditorGUI.BeginChangeCheck();
+            var oldTexture = propTexture.textureValue;
+
             // 1行テクスチャプロパティ
             materialEditor.TexturePropertySingleLine(label, propTexture, propColor);
+
+            // もしテクスチャが新たに設定されたならば、カラーを白にリセットする
+            if (EditorGUI.EndChangeCheck() && oldTexture == null && propTexture.textureValue != null)
+            {
+                propColor.colorValue = Color.white;
+            }
 
             // もし NoScaleOffset がないなら ScaleOffset も追加で表示する
             if (!propTexture.flags.HasFlag(MaterialProperty.PropFlags.NoScaleOffset))

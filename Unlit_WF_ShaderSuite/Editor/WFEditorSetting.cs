@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2021 whiteflare.
+ *  Copyright 2018-2022 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -30,8 +30,10 @@ namespace UnlitWF
 
         [Header("Shader Build Settings")]
         public bool enableStripping = true;
+        public bool stripUnusedVariant = true;
         public bool stripFallback = true;
         public bool stripMetaPass = true;
+        public bool stripUnusedLodFade = true;
 
         [Header("Editor Behaviour Settings")]
         public bool enableScanProjects = true;
@@ -44,7 +46,7 @@ namespace UnlitWF
                 // 見つからないなら一時オブジェクトを作成して返却
                 return ScriptableObject.CreateInstance<WFEditorSetting>();
             }
-            Debug.LogFormat("[WF][Settings] Load Settings: {0}", AssetDatabase.GetAssetPath(settings[0]));
+            // Debug.LogFormat("[WF][Settings] Load Settings: {0}", AssetDatabase.GetAssetPath(settings[0]));
             return settings[0];
         }
 
@@ -72,17 +74,21 @@ namespace UnlitWF
     {
         SerializedProperty p_settingPriority;
         SerializedProperty p_enableStripping;
+        SerializedProperty p_stripUnusedVariant;
         SerializedProperty p_stripFallback;
         SerializedProperty p_stripMetaPass;
+        SerializedProperty p_stripUnusedLodFade;
         SerializedProperty p_enableScanProjects;
 
         private void OnEnable()
         {
-            this.p_settingPriority = serializedObject.FindProperty("settingPriority");
-            this.p_enableStripping = serializedObject.FindProperty("enableStripping");
-            this.p_stripFallback = serializedObject.FindProperty("stripFallback");
-            this.p_stripMetaPass = serializedObject.FindProperty("stripMetaPass");
-            this.p_enableScanProjects = serializedObject.FindProperty("enableScanProjects");
+            this.p_settingPriority = serializedObject.FindProperty(nameof(WFEditorSetting.settingPriority));
+            this.p_enableStripping = serializedObject.FindProperty(nameof(WFEditorSetting.enableStripping));
+            this.p_stripUnusedVariant = serializedObject.FindProperty(nameof(WFEditorSetting.stripUnusedVariant));
+            this.p_stripUnusedLodFade = serializedObject.FindProperty(nameof(WFEditorSetting.stripUnusedLodFade));
+            this.p_stripFallback = serializedObject.FindProperty(nameof(WFEditorSetting.stripFallback));
+            this.p_stripMetaPass = serializedObject.FindProperty(nameof(WFEditorSetting.stripMetaPass));
+            this.p_enableScanProjects = serializedObject.FindProperty(nameof(WFEditorSetting.enableScanProjects));
         }
 
         public override void OnInspectorGUI()
@@ -100,6 +106,8 @@ namespace UnlitWF
             using (new EditorGUI.DisabledGroupScope(!p_enableStripping.boolValue))
             using (new EditorGUI.IndentLevelScope())
             {
+                EditorGUILayout.PropertyField(p_stripUnusedVariant);
+                EditorGUILayout.PropertyField(p_stripUnusedLodFade);
                 EditorGUILayout.PropertyField(p_stripFallback);
                 EditorGUILayout.PropertyField(p_stripMetaPass);
             }

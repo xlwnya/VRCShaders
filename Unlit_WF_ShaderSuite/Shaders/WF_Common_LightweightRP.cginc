@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2021 whiteflare.
+ *  Copyright 2018-2022 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -82,6 +82,7 @@
     #define UnpackScaleNormal           UnpackNormalScale
     #define BlendNormals                BlendNormal
     #define GGXTerm                     D_GGX
+    #define UNITY_APPLY_DITHER_CROSSFADE(x)
 
     float3 DecodeLightmap(float4 lmap_tex) {
         return DecodeLightmap(lmap_tex, half4(LIGHTMAP_HDR_MULTIPLIER, LIGHTMAP_HDR_EXPONENT, 0.0h, 0.0h));
@@ -120,6 +121,22 @@
 
     float3 getPoint1LightPos() {
         return 1 <= GetAdditionalLightsCount() ? _AdditionalLightsPosition[0].xyz : float3(0, 0, 0);
+    }
+
+    float3 calcPointLightWorldDir(float3 ws_light_pos, float3 ws_vertex) {
+        ws_vertex = ws_light_pos - ws_vertex;
+        if (dot(ws_vertex, ws_vertex) < 0.000001) {
+            ws_vertex = float3(0, 1, 0);    // 至近距離ならば+Y方向を返却する
+        }
+        return normalize( ws_vertex );
+    }
+
+    float3 calcPointLight1WorldDir(float3 ws_vertex) {
+        if (GetAdditionalLightsCount() < 1) {
+            return float3(0, 0, 0); // ポイントライトが無いときは 0, 0, 0 を返す
+        } else {
+            return calcPointLightWorldDir(getPoint1LightPos(), ws_vertex);
+        }
     }
 
     float3 samplePoint1LightColor(float3 ws_vertex) {

@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2021 whiteflare.
+ *  Copyright 2018-2022 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -32,24 +32,46 @@ namespace UnlitWF
 #if UNITY_2019_1_OR_NEWER
 
     public class WF_ShaderPreprocessor : IPreprocessShaders
+#if VRC_SDK_VRCSDK3
+        , VRC.SDKBase.Editor.BuildPipeline.IVRCSDKBuildRequestedCallback
+#endif
     {
-        private bool initialized = false;
-        private List<UsedShaderVariant> usedShaderVariantList;
-        private WFEditorSetting settings;
+        private static readonly Singleton Core = new Singleton();
 
         public int callbackOrder
         {
             get
             {
-                ClearUsedShaderVariantList();
+                Core.ClearUsedShaderVariantListIfOtherPlatform(); // 他プラットフォームの場合はここでクリアする
                 return 100;
             }
         }
 
-        public WF_ShaderPreprocessor()
+        public enum WFBuildPlatformType
         {
-            ClearUsedShaderVariantList();
+            VRCSDK3_Avatar,
+            VRCSDK3_World,
+            OtherEnvs,
         }
+
+#if VRC_SDK_VRCSDK3
+        bool VRC.SDKBase.Editor.BuildPipeline.IVRCSDKBuildRequestedCallback.OnBuildRequested(VRC.SDKBase.Editor.BuildPipeline.VRCSDKRequestedBuildType requestedBuildType)
+        {
+            // VRCSDK3 からビルドリクエストされた場合はここでクリア＆初期化する
+            switch (requestedBuildType)
+            {
+                case VRC.SDKBase.Editor.BuildPipeline.VRCSDKRequestedBuildType.Avatar:
+                    Core.InitUsedShaderVariantList(WFBuildPlatformType.VRCSDK3_Avatar);
+                    break;
+                case VRC.SDKBase.Editor.BuildPipeline.VRCSDKRequestedBuildType.Scene:
+                    Core.InitUsedShaderVariantList(WFBuildPlatformType.VRCSDK3_World);
+                    break;
+            }
+            return true;
+        }
+#endif
+
+        private readonly WFEditorSetting settings = WFEditorSetting.GetOneOfSettings();
 
         public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
         {
@@ -57,7 +79,7 @@ namespace UnlitWF
             if (IsStripTargetShader(shader))
             {
                 // 設定はここで読み込む
-                InitUsedShaderVariantList();
+                Core.InitUsedShaderVariantList();
 
                 if (settings == null || !settings.enableStripping)
                 {
@@ -65,13 +87,16 @@ namespace UnlitWF
                     return;
                 }
 
+                var usedShaderVariantList = Core.GetList();
+
                 var before = data.Count;
                 var strip = 0;
-                strip += DoStripForwardBasePass(shader, snippet, data);
+                strip += DoStripForwardBasePass(shader, snippet, data, usedShaderVariantList);
                 strip += DoStripMetaPass(shader, snippet, data);
 
 #if WF_STRIP_LOG_RESULT
-                if (data.Count < before) {
+                if (data.Count < before)
+                {
                     Debug.LogFormat("[WF][Preprocess] shader stripping: {0}/{1} at {2}/{3}/{4}", strip, before, shader.name, snippet.passName, snippet.shaderType);
                 }
 #endif
@@ -79,56 +104,72 @@ namespace UnlitWF
 #endif
         }
 
-        protected int DoStripForwardBasePass(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
+        protected int DoStripForwardBasePass(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data, List<UsedShaderVariant> usedShaderVariantList)
         {
-            if (snippet.passType != PassType.ForwardBase)
+            if (snippet.passType != PassType.ForwardBase && snippet.passType != PassType.ShadowCaster)
             {
-                // ここで stripping するのは ForwardBase だけ
+                // ここで stripping するのは ForwardBase と ShadowCaster だけ
                 return 0;
             }
-
-            // 存在するキーワードの配列
-            var existingKwds = GetExistingShaderKeywords(shader, data);
-            if (existingKwds.Length == 0)
+            if (!settings.stripUnusedVariant)
             {
-                // feature keyword が無いならば何もしない
+                // 設定で無効化されているならば stripping しない
+                return 0;
+            }
+            if (Core.MaterialCount == 0)
+            {
+                // 対応シェーダのOnProcessShaderが呼ばれているのにシーンにマテリアルが見つからないのはシーンの検索に失敗しているということなので
+                // 警告を出力して stripping はしない
+                Debug.LogWarning("[WF][Preprocess] Disable Stripping because there was no material in the scene.");
                 return 0;
             }
 
             var count = 0;
 
-            for (int i = data.Count - 1; 0 <= i; i--)
+            // LOD_FADE_CROSSFADE を除外する
+            if (CanStripLodFade())
             {
-                var d = data[i];
-
-                if (usedShaderVariantList.Any(v => v.IsMatchVariant(shader, existingKwds, d)))
+                var kwd_LOD_FADE_CROSSFADE = new ShaderKeyword(shader, "LOD_FADE_CROSSFADE");
+                for (int i = data.Count - 1; 0 <= i; i--)
                 {
-#if WF_STRIP_LOG_VERBOSE
-                        Debug.LogFormat("[WF][Preprocess] match variant: {0}/{1}/{2}/{3} ({4})", 
-                            shader.name, 
-                            snippet.passName, 
-                            snippet.shaderType,
-                            d.shaderCompilerPlatform,
-                            string.Join(", ", ToKeywordArray(shader, d.shaderKeywordSet)));
-#endif
-                    // 使用しているバリアントならば何もしない
-                    continue;
+                    var d = data[i];
+                    if (d.shaderKeywordSet.IsEnabled(kwd_LOD_FADE_CROSSFADE))
+                    {
+                        data.RemoveAt(i);
+                        count++;
+                        continue;
+                    }
                 }
-                // 使用してないバリアントは削除
-                data.RemoveAt(i);
-                count++;
+            }
+
+            // 使用していない Enable キーワードの組み合わせを除外する
+            var existingKwds = GetExistingShaderKeywords(shader, data);
+            if (existingKwds.Length != 0)
+            {
+                for (int i = data.Count - 1; 0 <= i; i--)
+                {
+                    var d = data[i];
+
+                    if (usedShaderVariantList.Any(v => v.IsMatchVariant(shader, existingKwds, d)))
+                    {
+#if WF_STRIP_LOG_VERBOSE
+                    Debug.LogFormat("[WF][Preprocess] match variant: {0}/{1}/{2}/{3} ({4})",
+                        shader.name,
+                        snippet.passName,
+                        snippet.shaderType,
+                        d.shaderCompilerPlatform,
+                        string.Join(", ", ToKeywordArray(shader, d.shaderKeywordSet)));
+#endif
+                        // 使用しているバリアントならば何もしない
+                        continue;
+                    }
+                    // 使用してないバリアントは削除
+                    data.RemoveAt(i);
+                    count++;
+                }
             }
 
             return count;
-        }
-
-        private bool ContainsShaderVariant(ShaderVariantCollection collection, Shader shader, ShaderSnippetData snippet, ShaderCompilerData data)
-        {
-            if (collection == null)
-            {
-                return false;
-            }
-            return collection.Contains(new ShaderVariantCollection.ShaderVariant(shader, snippet.passType, ToKeywordArray(shader, data.shaderKeywordSet)));
         }
 
         protected int DoStripMetaPass(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
@@ -147,11 +188,6 @@ namespace UnlitWF
             int count = data.Count;
             data.Clear();
             return count;
-        }
-
-        private string[] ToKeywordArray(Shader shader, ShaderKeywordSet keys)
-        {
-            return keys.GetShaderKeywords().Select(kwd => ShaderKeyword.GetKeywordName(shader, kwd)).ToArray();
         }
 
         private static bool IsStripTargetShader(Shader shader)
@@ -175,6 +211,29 @@ namespace UnlitWF
             return true;
         }
 
+        private bool CanStripLodFade()
+        {
+            if (settings.stripUnusedLodFade) // 設定で LodCrossFade の strip が有効のときに
+            {
+                if (Core.CurrentPlatform == WFBuildPlatformType.VRCSDK3_Avatar)
+                {
+                    return true; // VRCSDK3_Avatar からキックされたならば LODGroup は使っていないので削除できる
+                }
+                if (!Core.ExistLodGroupInScene)
+                {
+                    return true; // シーン内に LODGroup が無いならば削除できる
+                }
+            }
+            return false; // それ以外では削除しない
+        }
+
+#if WF_STRIP_LOG_VERBOSE
+        private string[] ToKeywordArray(Shader shader, ShaderKeywordSet keys)
+        {
+            return keys.GetShaderKeywords().Select(kwd => ShaderKeyword.GetKeywordName(shader, kwd)).ToArray();
+        }
+#endif
+
         private string[] GetExistingShaderKeywords(Shader shader, IList<ShaderCompilerData> data)
         {
             return data.SelectMany(d => d.shaderKeywordSet.GetShaderKeywords())
@@ -183,75 +242,166 @@ namespace UnlitWF
                 .Where(kwd => WFCommonUtility.IsEnableKeyword(kwd)).Distinct().ToArray();
         }
 
-        private void ClearUsedShaderVariantList()
+        public class Singleton
         {
-            initialized = false;
-            usedShaderVariantList = null;
+            private readonly object lockToken = new object();
+
+            private List<UsedShaderVariant> usedShaderVariantList = null;
+            private bool existLodGroupInScene = false;
+            private WFBuildPlatformType currentPlatform = WFBuildPlatformType.OtherEnvs;
+            private int materialCount = 0;
+
+            public int MaterialCount => materialCount;
+
+            public WFBuildPlatformType CurrentPlatform
+            {
+                get => currentPlatform;
+            }
+
+            public bool ExistLodGroupInScene
+            {
+                get => existLodGroupInScene;
+            }
+
+            public List<UsedShaderVariant> GetList()
+            {
+                lock (lockToken)
+                {
+                    var list = new List<UsedShaderVariant>();
+                    if (usedShaderVariantList != null)
+                    {
+                        list.AddRange(usedShaderVariantList);
+                    }
+                    return list;
+                }
+            }
+
+            public void ClearUsedShaderVariantList()
+            {
+                lock (lockToken)
+                {
+                    usedShaderVariantList = null;
+                    existLodGroupInScene = false;
+                    materialCount = 0;
+#if WF_STRIP_LOG_SCAN_RESULT
+                    Debug.LogFormat("[WF][Preprocess] ClearUsedShaderVariantList, this = {0}, currentPlatform = {1}", GetHashCode(), currentPlatform);
+#endif
+                }
+            }
+
+            public void ClearUsedShaderVariantListIfOtherPlatform()
+            {
+                lock (lockToken)
+                {
+                    if (currentPlatform == WFBuildPlatformType.OtherEnvs)
+                    {
+                        ClearUsedShaderVariantList();
+                    }
+                }
+            }
+
+            public void InitUsedShaderVariantList(WFBuildPlatformType? currentPlatform = null)
+            {
+                lock (lockToken)
+                {
+                    // プラットフォーム指定されたときは設定してリセット
+                    if (currentPlatform != null)
+                    {
+                        this.currentPlatform = (WFBuildPlatformType)currentPlatform;
+                        ClearUsedShaderVariantList();
+                    }
+                    // 初期化済みならば何もしない
+                    if (usedShaderVariantList != null)
+                    {
+                        return;
+                    }
+
+                    // 作成する
+                    usedShaderVariantList = new UsedShaderVariantSeeker().CreateUsedShaderVariantList(out materialCount);
+                    // その他の変数も一緒に初期化
+                    existLodGroupInScene = ExistsLodGroupInScene();
+#if WF_STRIP_LOG_SCAN_RESULT
+                    Debug.LogFormat("[WF][Preprocess] InitUsedShaderVariantList, this = {0}, currentPlatform = {1}", base.GetHashCode(), this.currentPlatform);
+#endif
+                }
+            }
+
+            private bool ExistsLodGroupInScene()
+            {
+                for (int i = 0; i < UnityEditor.SceneManagement.EditorSceneManager.sceneCount; i++)
+                {
+                    var scene = UnityEditor.SceneManagement.EditorSceneManager.GetSceneAt(i);
+                    if (scene.GetRootGameObjects().SelectMany(rt => rt.GetComponentsInChildren<LODGroup>(true)).Any(lod => lod != null))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
 
-        private void InitUsedShaderVariantList()
+        public class UsedShaderVariantSeeker
         {
-            if (initialized)
+            private WFEditorSetting settings = WFEditorSetting.GetOneOfSettings(); // Assets 内に WF_EditorSetting があるならば読み込み
+            private List<UsedShaderVariant> usedShaderVariantList = new List<UsedShaderVariant>();
+
+            public List<UsedShaderVariant> CreateUsedShaderVariantList(out int materialCount)
             {
-                // 初期化済みならば何もしない
-                return;
-            }
-            // Assets 内に WF_EditorSetting があるならば読み込み
-            settings = WFEditorSetting.GetOneOfSettings();
+                var materials = new List<Material>();
 
-            var materials = new List<Material>();
-            var used = new List<UsedShaderVariant>();
+                var sw = new System.Diagnostics.Stopwatch();
+                sw.Start();
 
-            var sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
+                // シーンから UsedShaderVariant を回収
+                materials.AddRange(MaterialSeeker.GetAllSceneAllMaterial());
+                materials = materials.Distinct()
+                    .Where(mat => mat != null && IsStripTargetShader(mat.shader))
+                    .ToList();
+                materialCount = materials.Count;
 
-            // シーンから UsedShaderVariant を回収
-            materials.AddRange(MaterialSeeker.GetAllSceneAllMaterial());
+                foreach (var mat in materials)
+                {
+                    AppendUsedShaderVariant(mat, mat.shader);
+                }
 
-            materials = materials.Distinct()
-                .Where(mat => mat != null && IsStripTargetShader(mat.shader))
-                .ToList();
+                sw.Stop();
 
-            foreach (var mat in materials)
-            {
-                AppendUsedShaderVariant(used, mat, mat.shader);
-            }
-
-            sw.Stop();
-
-            usedShaderVariantList = used.Distinct().ToList();
-            initialized = true;
+                var result = usedShaderVariantList.Distinct().ToList();
 
 #if WF_STRIP_LOG_SCAN_RESULT
-            foreach (var mat in materials) {
-                Debug.Log(string.Format("[WF][Preprocess] find materials in scene: {0}", mat), mat);
-            }
-            foreach (var uv in usedShaderVariantList) {
-                Debug.LogFormat("[WF][Preprocess] used variant: {0}", uv);
-            }
+                foreach (var mat in materials)
+                {
+                    Debug.Log(string.Format("[WF][Preprocess] find materials in scene: {0}", mat), mat);
+                }
+                foreach (var uv in result)
+                {
+                    Debug.LogFormat("[WF][Preprocess] used variant: {0}", uv);
+                }
 #endif
 
-            Debug.LogFormat("[WF][Preprocess] fnish scene material scanning: {0} ms, {1} materials, {2} usedShaderVariantList", sw.ElapsedMilliseconds, materials.Count, usedShaderVariantList.Count);
-        }
+                Debug.LogFormat("[WF][Preprocess] fnish scene material scanning: {0} ms, {1} materials, {2} usedShaderVariantList", sw.ElapsedMilliseconds, materialCount, result.Count);
+                return result;
+            }
 
-        private void AppendUsedShaderVariant(List<UsedShaderVariant> result, Material mat, Shader shader)
-        {
-            // マテリアルから _XX_ENABLE となっているキーワードを回収
-            IEnumerable<string> keywords = mat.shaderKeywords.Where(kwd => WFCommonUtility.IsEnableKeyword(kwd));
-
-            UsedShaderVariant usv = new UsedShaderVariant(shader.name, keywords);
-            if (!result.Contains(usv))
+            private void AppendUsedShaderVariant(Material mat, Shader shader)
             {
-                result.Add(usv);
+                // マテリアルから _XX_ENABLE となっているキーワードを回収
+                IEnumerable<string> keywords = mat.shaderKeywords.Where(kwd => WFCommonUtility.IsEnableKeyword(kwd));
 
-                // 直接のシェーダではなく、そのフォールバックを利用できるならばそれも追加する
-                if (settings == null || !settings.stripFallback)
+                UsedShaderVariant usv = new UsedShaderVariant(shader.name, keywords);
+                if (!usedShaderVariantList.Contains(usv))
                 {
-                    var name = WFCommonUtility.GetShaderFallBackTarget(shader);
-                    var fallback = name == null ? null : Shader.Find(name);
-                    if (IsStripTargetShader(fallback))
+                    usedShaderVariantList.Add(usv);
+
+                    // 直接のシェーダではなく、そのフォールバックを利用できるならばそれも追加する
+                    if (settings == null || !settings.stripFallback)
                     {
-                        AppendUsedShaderVariant(result, mat, fallback);
+                        var name = WFCommonUtility.GetShaderFallBackTarget(shader);
+                        var fallback = name == null ? null : Shader.Find(name);
+                        if (IsStripTargetShader(fallback))
+                        {
+                            AppendUsedShaderVariant(mat, fallback);
+                        }
                     }
                 }
             }

@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2021 whiteflare.
+ *  Copyright 2018-2022 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -21,6 +21,11 @@
     ////////////////////////////
     // Platform Glue
     ////////////////////////////
+
+#if !defined(UNITY_OLD_PREPROCESSOR) && UNITY_VERSION < 202003
+    // 未定義だけどUnity2020.3未満のときは定義する
+    #define UNITY_OLD_PREPROCESSOR
+#endif
 
 #ifdef _WF_PLATFORM_LWRP
     // Lightweight RP 向け定義
@@ -67,6 +72,18 @@
 
     #if defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON)
         #define _LMAP_ENABLE
+    #endif
+
+    #ifdef _WF_LEGACY_FEATURE_SWITCH
+        #define FEATURE_TGL(name)               float name
+        #define FEATURE_TGL_ON_BEGIN(name)      if (TGL_ON(name)) {
+        #define FEATURE_TGL_OFF_BEGIN(name)     if (TGL_OFF(name)) {
+        #define FEATURE_TGL_END                 }
+    #else
+        #define FEATURE_TGL(name)
+        #define FEATURE_TGL_ON_BEGIN(name)
+        #define FEATURE_TGL_OFF_BEGIN(name)
+        #define FEATURE_TGL_END
     #endif
 
     float2 SafeNormalizeVec2(float2 in_vec) {
@@ -143,14 +160,6 @@
 
     float calcBrightness(float3 color) {
         return dot(color, BT601);
-    }
-
-    float3 calcPointLight1WorldDir(float3 ws_vertex) {
-        ws_vertex = getPoint1LightPos() - ws_vertex;
-        if (dot(ws_vertex, ws_vertex) < NZF) {
-            ws_vertex = float3(0, 1, 0);
-        }
-        return SafeNormalizeVec3( ws_vertex );
     }
 
     float3 calcHorizontalCoordSystem(float azimuth, float alt) {
@@ -336,5 +345,30 @@
         return DecodeHDR(color, cubemap_HDR);
     }
 */
+
+    ////////////////////////////
+    // Random
+    ////////////////////////////
+
+    float random2to1(float2 st) {  // float2 -> float [0-1)
+        float vec;
+        vec.x = dot(st, float2(12.9898, 78.233));
+        return frac(sin(vec) * 43758.5453);
+    }
+
+    float2 random2to2(float2 st) { // float2 -> float2 [0-1)
+        float2 vec;
+        vec.x = dot(st, float2(12.9898, 78.233));
+        vec.y = dot(st, float2(31.5649, 51.877));
+        return frac(sin(vec) * 43758.5453);
+    }
+
+    float3 random2to3(float2 st) { // float2 -> float3 [0-1)
+        float3 vec;
+        vec.x = dot(st, float2(12.9898, 78.233));
+        vec.y = dot(st, float2(31.5649, 51.877));
+        vec.z = dot(st, float2(29.1773, 33.499));
+        return frac(sin(vec) * 43758.5453);
+    }
 
 #endif
