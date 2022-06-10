@@ -7,60 +7,59 @@
 	#include "UnityCG.cginc"
 	#include "AutoLight.cginc"
 	#include "Lighting.cginc"
-	#include "SunaoShader_Function.cginc"
 
 //-------------------------------------変数宣言
 
 //----Main
 	UNITY_DECLARE_TEX2D(_MainTex);
-	uniform float4    _MainTex_ST;
-	uniform float4    _Color;
-	uniform float     _Cutout;
-	uniform float     _Alpha;
+	float4    _MainTex_ST;
+	float4    _Color;
+	float     _Cutout;
+	float     _Alpha;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_AlphaMask);
-	uniform float     _AlphaMaskStrength;
-	uniform float     _Bright;
-	uniform bool      _VertexColor;
-	uniform float     _UVScrollX;
-	uniform float     _UVScrollY;
-	uniform float     _UVAnimation;
-	uniform uint      _UVAnimX;
-	uniform uint      _UVAnimY;
-	uniform bool      _UVAnimOtherTex;
+	float     _AlphaMaskStrength;
+	float     _Bright;
+	bool      _VertexColor;
+	float     _UVScrollX;
+	float     _UVScrollY;
+	float     _UVAnimation;
+	uint      _UVAnimX;
+	uint      _UVAnimY;
+	bool      _UVAnimOtherTex;
 
 //----Lighting
-	uniform float     _Unlit;
-	uniform bool      _MonochromeLit;
+	float     _Unlit;
+	float     _MonochromeLit;
 
 //----Outline
-	uniform bool      _OutLineEnable;
-	uniform sampler2D _OutLineMask;
-	uniform float4    _OutLineColor;
-	uniform float     _OutLineSize;
+	bool      _OutLineEnable;
+	sampler2D _OutLineMask;
+	float4    _OutLineColor;
+	float     _OutLineSize;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_OutLineTexture);
-	uniform bool      _OutLineLighthing;
-	uniform bool      _OutLineTexColor;
-	uniform bool      _OutLineFixScale;
+	bool      _OutLineLighthing;
+	bool      _OutLineTexColor;
+	bool      _OutLineFixScale;
 
 //----Other
-	uniform bool      _AlphaToMask;
-	uniform float     _DirectionalLight;
-	uniform float     _SHLight;
-	uniform float     _PointLight;
-	uniform bool      _LightLimitter;
-	uniform float     _MinimumLight;
+	bool      _AlphaToMask;
+	float     _DirectionalLight;
+	float     _SHLight;
+	float     _PointLight;
+	bool      _LightLimitter;
+	float     _MinimumLight;
 
-	uniform bool      _EnableGammaFix;
-	uniform float     _GammaR;
-	uniform float     _GammaG;
-	uniform float     _GammaB;
+	bool      _EnableGammaFix;
+	float     _GammaR;
+	float     _GammaG;
+	float     _GammaB;
 
-	uniform bool      _EnableBlightFix;
-	uniform float     _BlightOutput;
-	uniform float     _BlightOffset;
+	bool      _EnableBlightFix;
+	float     _BlightOutput;
+	float     _BlightOffset;
 
-	uniform bool      _LimitterEnable;
-	uniform float     _LimitterMax;
+	bool      _LimitterEnable;
+	float     _LimitterMax;
 
 
 //-------------------------------------頂点シェーダ入力構造体
@@ -79,22 +78,24 @@ struct VIN {
 //-------------------------------------頂点シェーダ出力構造体
 
 struct VOUT {
-	float4 pos     : SV_POSITION;
-	float3 wpos    : WPOSITION;
-	float2 uv      : TEXCOORD0;
-	float3 color   : COLOR0;
-	float3 light   : LIGHT0;
-	float  mask    : MASK0;
+	nointerpolation float4 pos     : SV_POSITION;
+	                float3 wpos    : WPOSITION;
+	                float2 uv      : TEXCOORD0;
+	                float3 color   : COLOR0;
+	                float3 light   : LIGHT0;
+	                float  mask    : MASK0;
 
-	UNITY_FOG_COORDS(1)
 	#ifdef PASS_FA
-		UNITY_LIGHTING_COORDS(2 , 3)
+		UNITY_LIGHTING_COORDS(1 , 2)
 	#endif
+
+	UNITY_FOG_COORDS(3)
 
 	UNITY_VERTEX_INPUT_INSTANCE_ID
 	UNITY_VERTEX_OUTPUT_STEREO
 };
 
+	#include "SunaoShader_Function.cginc"
 
 //----------------------------------------------------------------------
 //                頂点シェーダ
@@ -106,7 +107,6 @@ VOUT vert (VIN v) {
 
 	UNITY_INITIALIZE_OUTPUT(VOUT , o);
 	UNITY_SETUP_INSTANCE_ID(v);
-	UNITY_TRANSFER_INSTANCE_ID(v, o);
 	UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 //-------------------------------------UV
@@ -158,7 +158,7 @@ VOUT vert (VIN v) {
 
 	if (_OutLineLighthing) {
 
-		#ifdef PASS_OL_FB
+		#ifdef PASS_FB
 			o.light  =                  ShadeSH9(float4(-1.0f ,  0.0f ,  0.0f , 1.0f));
 			o.light  = max(o.light , ShadeSH9(float4( 1.0f ,  0.0f ,  0.0f , 1.0f)));
 			o.light  = max(o.light , ShadeSH9(float4( 0.0f , -1.0f ,  0.0f , 1.0f)));
@@ -196,6 +196,9 @@ VOUT vert (VIN v) {
 //-------------------------------------フォグ
 	UNITY_TRANSFER_FOG(o,o.pos);
 
+
+	UNITY_TRANSFER_INSTANCE_ID(v , o);
+
 	return o;
 }
 
@@ -220,24 +223,17 @@ float4 frag (VOUT IN) : COLOR {
 	#endif
 
 //-------------------------------------カットアウト
-	#ifdef CUTOUT
-		clip(OUT.a - _Cutout);
-		if (_AlphaToMask) {
-			OUT.a = saturate((OUT.a - _Cutout) * 10.0f);
-		} else {
-			OUT.a = 1.0f;
-		}
-	#endif
+		#include "./Module/SS_Cutout.cginc"
 
 	clip(IN.mask - 0.1f);
 
 //-------------------------------------ライティング
 	float3 Lighting  = (float3)1.0f;
 
-	#ifdef PASS_OL_FB
+	#ifdef PASS_FB
 		if (_OutLineLighthing) Lighting = IN.light;
 	#endif
-	#ifdef PASS_OL_FA
+	#ifdef PASS_FA
 		if (_OutLineLighthing) {
 			UNITY_LIGHT_ATTENUATION(Atten , IN , IN.wpos);
 			Lighting  = _LightColor0 * _PointLight * Atten * 0.6f;
@@ -252,47 +248,12 @@ float4 frag (VOUT IN) : COLOR {
 		       MaxLight = min(MaxLight , 1.25f);
 		       Lighting = saturate(Lighting / MaxLight);
 	}
-	if (_MonochromeLit) Lighting = MonoColor(Lighting);
+	if (_MonochromeLit > 0.0f) Lighting = lerp(Lighting , MonoColor(Lighting) , _MonochromeLit);
 	float  LightPower   = saturate(MonoColor(Lighting));
 
 	OUT.rgb         *= Lighting;
 
-//-------------------------------------ガンマ修正
-	if (_EnableGammaFix) {
-		_GammaR  = max(_GammaR , 0.00001f);
-		_GammaG  = max(_GammaG , 0.00001f);
-		_GammaB  = max(_GammaB , 0.00001f);
-
-		OUT.r    = pow(OUT.r , 1.0f / (1.0f / _GammaR));
-		OUT.g    = pow(OUT.g , 1.0f / (1.0f / _GammaG));
-		OUT.b    = pow(OUT.b , 1.0f / (1.0f / _GammaB));
-	}
-
-//-------------------------------------明度修正
-	if (_EnableBlightFix) {
-		OUT.rgb *= _BlightOutput;
-		OUT.rgb  = max(OUT.rgb + _BlightOffset , 0.0f);
-	}
-
-//-------------------------------------出力リミッタ
-	if (_LimitterEnable) {
-		OUT.rgb  = min(OUT.rgb , _LimitterMax);
-	}
-
-//-------------------------------------BlendOpの代用
-	#ifdef PASS_OL_FA
-		float OutAlpha = saturate(MonoColor(OUT.rgb));
-		#ifndef TRANSPARENT
-	       OUT.a    = OutAlpha;
-		#endif
-		#ifdef TRANSPARENT
-	       OUT.rgb *= OUT.a;
-	       OUT.a    = OutAlpha * pow(OUT.a , 1.8f);
-		#endif
-	#endif
-
-//-------------------------------------フォグ
-	UNITY_APPLY_FOG(IN.fogCoord, OUT);
+	#include "./Module/SS_Output.cginc"
 
 
 	return OUT;

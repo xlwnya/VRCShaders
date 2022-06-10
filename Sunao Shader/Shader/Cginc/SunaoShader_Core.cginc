@@ -9,185 +9,184 @@
 	#include "UnityCG.cginc"
 	#include "AutoLight.cginc"
 	#include "Lighting.cginc"
-	#include "SunaoShader_Function.cginc"
 
 //-------------------------------------変数宣言
 
 //----Main
 	UNITY_DECLARE_TEX2D(_MainTex);
-	uniform float4    _MainTex_ST;
-	uniform float4    _Color;
-	uniform float     _Cutout;
-	uniform float     _Alpha;
-	uniform sampler2D _BumpMap;
-	uniform float4    _BumpMap_ST;
+	float4    _MainTex_ST;
+	float4    _Color;
+	float     _Cutout;
+	float     _Alpha;
+	sampler2D _BumpMap;
+	float4    _BumpMap_ST;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_OcclusionMap);
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_AlphaMask);
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_SubTex);
-	uniform float4    _SubTex_ST;
-	uniform float4    _SubTex_TexelSize;
-	uniform float4    _SubColor;
-	uniform bool      _SubTexEnable;
-	uniform float     _SubTexBlend;
-	uniform uint      _SubTexBlendMode;
-	uniform uint      _SubTexCulling;
-	uniform float     _Bright;
-	uniform float     _BumpScale;
-	uniform float     _OcclusionStrength;
-	uniform float     _OcclusionMode;
-	uniform float     _AlphaMaskStrength;
-	uniform bool      _VertexColor;
-	uniform float     _UVScrollX;
-	uniform float     _UVScrollY;
-	uniform float     _UVAnimation;
-	uniform uint      _UVAnimX;
-	uniform uint      _UVAnimY;
-	uniform bool      _UVAnimOtherTex;
-	uniform bool      _DecalEnable;
-	uniform sampler2D _DecalTex;
-	uniform float4    _DecalTex_TexelSize;
-	uniform float4    _DecalColor;
-	uniform float     _DecalPosX;
-	uniform float     _DecalPosY;
-	uniform float     _DecalSizeX;
-	uniform float     _DecalSizeY;
-	uniform float     _DecalRotation;
-	uniform uint      _DecalMode;
-	uniform uint      _DecalMirror;
-	uniform float     _DecalEmission;
-	uniform float     _DecalBright;
-	uniform float     _DecalScrollX;
-	uniform float     _DecalScrollY;
-	uniform float     _DecalAnimation;
-	uniform uint      _DecalAnimX;
-	uniform uint      _DecalAnimY;
+	float4    _SubTex_ST;
+	float4    _SubTex_TexelSize;
+	float4    _SubColor;
+	bool      _SubTexEnable;
+	float     _SubTexBlend;
+	uint      _SubTexBlendMode;
+	uint      _SubTexCulling;
+	float     _Bright;
+	float     _BumpScale;
+	float     _OcclusionStrength;
+	float     _OcclusionMode;
+	float     _AlphaMaskStrength;
+	bool      _VertexColor;
+	float     _UVScrollX;
+	float     _UVScrollY;
+	float     _UVAnimation;
+	uint      _UVAnimX;
+	uint      _UVAnimY;
+	bool      _UVAnimOtherTex;
+	bool      _DecalEnable;
+	sampler2D _DecalTex;
+	float4    _DecalTex_TexelSize;
+	float4    _DecalColor;
+	float     _DecalPosX;
+	float     _DecalPosY;
+	float     _DecalSizeX;
+	float     _DecalSizeY;
+	float     _DecalRotation;
+	uint      _DecalMode;
+	uint      _DecalMirror;
+	float     _DecalEmission;
+	float     _DecalBright;
+	float     _DecalScrollX;
+	float     _DecalScrollY;
+	float     _DecalAnimation;
+	uint      _DecalAnimX;
+	uint      _DecalAnimY;
 
 //----Shading & Lighting
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadeMask);
-	uniform float     _Shade;
-	uniform float     _ShadeWidth;
-	uniform float     _ShadeGradient;
-	uniform float     _ShadeColor;
-	uniform float4    _CustomShadeColor;
-	uniform bool      _ToonEnable;
-	uniform uint      _Toon;
-	uniform float     _ToonSharpness;
+	float     _Shade;
+	float     _ShadeWidth;
+	float     _ShadeGradient;
+	float     _ShadeColor;
+	float4    _CustomShadeColor;
+	bool      _ToonEnable;
+	uint      _Toon;
+	float     _ToonSharpness;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_LightMask);
-	uniform float     _LightBoost;
-	uniform float     _Unlit;
-	uniform bool      _MonochromeLit;
+	float     _LightBoost;
+	float     _Unlit;
+	float     _MonochromeLit;
 
 //----Outline
-	uniform bool      _OutLineEnable;
-	uniform sampler2D _OutLineMask;
-	uniform float4    _OutLineColor;
-	uniform float     _OutLineSize;
+	bool      _OutLineEnable;
+	sampler2D _OutLineMask;
+	float4    _OutLineColor;
+	float     _OutLineSize;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_OutLineTexture);
-	uniform bool      _OutLineLighthing;
-	uniform bool      _OutLineTexColor;
-	uniform bool      _OutLineFixScale;
+	bool      _OutLineLighthing;
+	bool      _OutLineTexColor;
+	bool      _OutLineFixScale;
 
 //----Emission
-	uniform bool      _EmissionEnable;
-	uniform sampler2D _EmissionMap;
-	uniform float4    _EmissionMap_ST;
-	uniform float4    _EmissionColor;
-	uniform float     _Emission;
-	uniform sampler2D _EmissionMap2;
-	uniform float4    _EmissionMap2_ST;
-	uniform uint      _EmissionMode;
-	uniform float     _EmissionBlink;
-	uniform float     _EmissionFrequency;
-	uniform uint      _EmissionWaveform;
-	uniform float     _EmissionScrX;
-	uniform float     _EmissionScrY;
-	uniform float     _EmissionAnimation;
-	uniform uint      _EmissionAnimX;
-	uniform uint      _EmissionAnimY;
-	uniform bool      _EmissionLighting;
-	uniform bool      _IgnoreTexAlphaE;
-	uniform float     _EmissionInTheDark;
+	bool      _EmissionEnable;
+	sampler2D _EmissionMap;
+	float4    _EmissionMap_ST;
+	float4    _EmissionColor;
+	float     _Emission;
+	sampler2D _EmissionMap2;
+	float4    _EmissionMap2_ST;
+	uint      _EmissionMode;
+	float     _EmissionBlink;
+	float     _EmissionFrequency;
+	uint      _EmissionWaveform;
+	float     _EmissionScrX;
+	float     _EmissionScrY;
+	float     _EmissionAnimation;
+	uint      _EmissionAnimX;
+	uint      _EmissionAnimY;
+	bool      _EmissionLighting;
+	bool      _IgnoreTexAlphaE;
+	float     _EmissionInTheDark;
 
 //----Parallax Emission
-	uniform bool      _ParallaxEnable;
-	uniform sampler2D _ParallaxMap;
-	uniform float4    _ParallaxMap_ST;
-	uniform float4    _ParallaxColor;
-	uniform float     _ParallaxEmission;
-	uniform float     _ParallaxDepth;
+	bool      _ParallaxEnable;
+	sampler2D _ParallaxMap;
+	float4    _ParallaxMap_ST;
+	float4    _ParallaxColor;
+	float     _ParallaxEmission;
+	float     _ParallaxDepth;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_ParallaxDepthMap);
-	uniform float4    _ParallaxDepthMap_ST;
-	uniform sampler2D _ParallaxMap2;
-	uniform float4    _ParallaxMap2_ST;
-	uniform uint      _ParallaxMode;
-	uniform float     _ParallaxBlink;
-	uniform float     _ParallaxFrequency;
-	uniform uint      _ParallaxWaveform;
-	uniform float     _ParallaxPhaseOfs;
-	uniform float     _ParallaxScrX;
-	uniform float     _ParallaxScrY;
-	uniform float     _ParallaxAnimation;
-	uniform uint      _ParallaxAnimX;
-	uniform uint      _ParallaxAnimY;
-	uniform bool      _ParallaxLighting;
-	uniform bool      _IgnoreTexAlphaPE;
-	uniform float     _ParallaxInTheDark;
+	float4    _ParallaxDepthMap_ST;
+	sampler2D _ParallaxMap2;
+	float4    _ParallaxMap2_ST;
+	uint      _ParallaxMode;
+	float     _ParallaxBlink;
+	float     _ParallaxFrequency;
+	uint      _ParallaxWaveform;
+	float     _ParallaxPhaseOfs;
+	float     _ParallaxScrX;
+	float     _ParallaxScrY;
+	float     _ParallaxAnimation;
+	uint      _ParallaxAnimX;
+	uint      _ParallaxAnimY;
+	bool      _ParallaxLighting;
+	bool      _IgnoreTexAlphaPE;
+	float     _ParallaxInTheDark;
 
 //----Reflection
-	uniform bool      _ReflectionEnable;
-	uniform sampler2D _MetallicGlossMap;
-	uniform float3    _GlossColor;
-	uniform float     _Specular;
-	uniform float     _Metallic;
-	uniform float     _GlossMapScale;
-	uniform sampler2D _MatCap;
-	uniform float3    _MatCapColor;
-	uniform bool      _MatCapMaskEnable;
+	bool      _ReflectionEnable;
+	sampler2D _MetallicGlossMap;
+	float3    _GlossColor;
+	float     _Specular;
+	float     _Metallic;
+	float     _GlossMapScale;
+	sampler2D _MatCap;
+	float3    _MatCapColor;
+	bool      _MatCapMaskEnable;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_MatCapMask);
-	uniform float     _MatCapStrength;
-	uniform bool      _ToonGlossEnable;
-	uniform uint      _ToonGloss;
-	uniform bool      _SpecularTexColor;
-	uniform bool      _MetallicTexColor;
-	uniform bool      _MatCapTexColor;
-	uniform bool      _SpecularSH;
-	uniform float     _SpecularMask;
-	uniform uint      _ReflectLit;
-	uniform uint      _MatCapLit;
-	uniform bool      _IgnoreTexAlphaR;
+	float     _MatCapStrength;
+	bool      _ToonGlossEnable;
+	uint      _ToonGloss;
+	bool      _SpecularTexColor;
+	bool      _MetallicTexColor;
+	bool      _MatCapTexColor;
+	bool      _SpecularSH;
+	float     _SpecularMask;
+	uint      _ReflectLit;
+	uint      _MatCapLit;
+	bool      _IgnoreTexAlphaR;
 
 //----Rim Lighting
-	uniform bool      _RimLitEnable;
+	bool      _RimLitEnable;
 	UNITY_DECLARE_TEX2D_NOSAMPLER(_RimLitMask);
-	uniform float     _RimLit;
-	uniform float     _RimLitGradient;
-	uniform float4    _RimLitColor;
-	uniform bool      _RimLitLighthing;
-	uniform bool      _RimLitTexColor;
-	uniform uint      _RimLitMode;
-	uniform bool      _IgnoreTexAlphaRL;
+	float     _RimLit;
+	float     _RimLitGradient;
+	float4    _RimLitColor;
+	bool      _RimLitLighthing;
+	bool      _RimLitTexColor;
+	uint      _RimLitMode;
+	bool      _IgnoreTexAlphaRL;
 
 //----Other
-	uniform uint      _Culling;
-	uniform bool      _AlphaToMask;
-	uniform float     _DirectionalLight;
-	uniform float     _PointLight;
-	uniform float     _SHLight;
-	uniform bool      _LightLimitter;
-	uniform float     _MinimumLight;
-	uniform int       _BlendOperation;
+	uint      _Culling;
+	bool      _AlphaToMask;
+	float     _DirectionalLight;
+	float     _PointLight;
+	float     _SHLight;
+	bool      _LightLimitter;
+	float     _MinimumLight;
+	int       _BlendOperation;
 
-	uniform bool      _EnableGammaFix;
-	uniform float     _GammaR;
-	uniform float     _GammaG;
-	uniform float     _GammaB;
+	bool      _EnableGammaFix;
+	float     _GammaR;
+	float     _GammaG;
+	float     _GammaB;
 
-	uniform bool      _EnableBlightFix;
-	uniform float     _BlightOutput;
-	uniform float     _BlightOffset;
+	bool      _EnableBlightFix;
+	float     _BlightOutput;
+	float     _BlightOffset;
 
-	uniform bool      _LimitterEnable;
-	uniform float     _LimitterMax;
+	bool      _LimitterEnable;
+	float     _LimitterMax;
 
 
 //-------------------------------------頂点シェーダ入力構造体
@@ -252,6 +251,7 @@ struct VOUT {
 	UNITY_VERTEX_OUTPUT_STEREO
 };
 
+	#include "SunaoShader_Function.cginc"
 
 //-------------------------------------頂点シェーダ
 

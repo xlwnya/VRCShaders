@@ -17,8 +17,8 @@ namespace SunaoShader {
 	public class GUI : ShaderGUI {
 
 		int     Version_H         = 1;
-		int     Version_M         = 5;
-		int     Version_L         = 4;
+		int     Version_M         = 6;
+		int     Version_L         = 1;
 
 		MaterialProperty MainTex;
 		MaterialProperty Color;
@@ -161,10 +161,23 @@ namespace SunaoShader {
 		MaterialProperty RimLitTexColor;
 		MaterialProperty RimLitMode;
 		MaterialProperty IgnoreTexAlphaRL;
+		
+		MaterialProperty FurEnable;
+		MaterialProperty FurMask;
+		MaterialProperty FurColor;
+		MaterialProperty FurLength;
+		MaterialProperty FurWidth;
+		MaterialProperty FurRoughness;
+		MaterialProperty FurFixScale;
+		MaterialProperty FurShapeMode;
+		MaterialProperty FurShapeTex;
+		MaterialProperty FurGravity;
 
 		MaterialProperty Culling;
 		MaterialProperty EnableZWrite;
 		MaterialProperty AlphaToMask;
+		MaterialProperty IgnoreProjector;
+		MaterialProperty SSFallback;
 		MaterialProperty DirectionalLight;
 		MaterialProperty SHLight;
 		MaterialProperty PointLight;
@@ -206,6 +219,7 @@ namespace SunaoShader {
 			bool Shader_StencilOut  = mat.shader.name.Contains("[Stencil Outline]");
 			bool Shader_Stencil     = mat.shader.name.Contains("[Stencil]"        );
 			bool Shader_StencilRW   = mat.shader.name.Contains("Read"             );
+			bool Shader_Fur         = mat.shader.name.Contains("Fur"              );
 
 			int  Shader_Type        = 0;
 			int  Previous_Type      = mat.GetInt("_SunaoShaderType");
@@ -238,6 +252,10 @@ namespace SunaoShader {
 					Shader_Type = 7;
 				}
 			}
+			if (Shader_Fur) {
+				Shader_Type = 8;
+			}
+
 
 			if ((Shader_Type) != (Previous_Type)) OnceRun = true;
 
@@ -385,9 +403,22 @@ namespace SunaoShader {
 			RimLitMode        = FindProperty("_RimLitMode"        , Prop , false);
 			IgnoreTexAlphaRL  = FindProperty("_IgnoreTexAlphaRL"  , Prop , false);
 
+			FurEnable         = FindProperty("_FurEnable"         , Prop , false);
+			FurMask           = FindProperty("_FurMask"           , Prop , false);
+			FurColor          = FindProperty("_FurColor"          , Prop , false);
+			FurLength         = FindProperty("_FurLength"         , Prop , false);
+			FurWidth          = FindProperty("_FurWidth"          , Prop , false);
+			FurRoughness      = FindProperty("_FurRoughness"      , Prop , false);
+			FurFixScale       = FindProperty("_FurFixScale"       , Prop , false);
+			FurShapeMode      = FindProperty("_FurShapeMode"      , Prop , false);
+			FurShapeTex       = FindProperty("_FurShapeTex"       , Prop , false);
+			FurGravity        = FindProperty("_FurGravity"        , Prop , false);
+
 			Culling           = FindProperty("_Culling"           , Prop , false);
 			EnableZWrite      = FindProperty("_EnableZWrite"      , Prop , false);
 			AlphaToMask       = FindProperty("_AlphaToMask"       , Prop , false);
+			IgnoreProjector   = FindProperty("_IgnoreProjector"   , Prop , false);
+			SSFallback        = FindProperty("_SSFallback"        , Prop , false);
 			DirectionalLight  = FindProperty("_DirectionalLight"  , Prop , false);
 			SHLight           = FindProperty("_SHLight"           , Prop , false);
 			PointLight        = FindProperty("_PointLight"        , Prop , false);
@@ -486,6 +517,7 @@ namespace SunaoShader {
 					if (Shader_Cutout     ) ME.ShaderProperty(Cutout , new GUIContent("Cutout"));
 					if (Shader_Transparent) ME.ShaderProperty(Alpha  , new GUIContent("Alpha" ));
 					if (Shader_Stencil    ) ME.ShaderProperty(Cutout , new GUIContent("Cutout"));
+					if (Shader_Fur        ) ME.ShaderProperty(Alpha  , new GUIContent("Alpha" ));
 
 
 					ME.TexturePropertySingleLine(new GUIContent("Normal Map") , BumpMap     );
@@ -526,7 +558,7 @@ namespace SunaoShader {
 							ME.ShaderProperty(OcclusionStrength , new GUIContent("Occlusion Strength"));
 							ME.ShaderProperty(OcclusionMode     , new GUIContent("Occlusion Mode"    ));
 						}
-						if ((AlphaMask.textureValue   != null) && (Shader_Cutout || Shader_Transparent || Shader_Stencil)) {
+						if ((AlphaMask.textureValue   != null) && (Shader_Cutout || Shader_Transparent || Shader_Stencil || Shader_Fur)) {
 							ME.ShaderProperty(AlphaMaskStrength , new GUIContent("Alpha Mask Strength"));
 						}
 
@@ -679,35 +711,62 @@ namespace SunaoShader {
 			}
 
 
-			GUILayout.Label("Outline", EditorStyles.boldLabel);
+			if (!Shader_Fur) {
+				GUILayout.Label("Outline", EditorStyles.boldLabel);
 
-			using (new EditorGUILayout.VerticalScope("box")) {
+				using (new EditorGUILayout.VerticalScope("box")) {
 
-				ME.ShaderProperty(OutLineEnable , new GUIContent("Enable Outline"));
+					ME.ShaderProperty(OutLineEnable , new GUIContent("Enable Outline"));
 
-				if (OutLineEnable.floatValue >= 0.5f) {
-					ME.TexturePropertySingleLine(new GUIContent("Outline Mask") , OutLineMask);
-					ME.ShaderProperty(OutLineColor , new GUIContent("Outline Color"));
-					ME.ShaderProperty(OutLineSize  , new GUIContent("Outline Scale" ));
+					if (OutLineEnable.floatValue >= 0.5f) {
+						ME.TexturePropertySingleLine(new GUIContent("Outline Mask") , OutLineMask);
+						ME.ShaderProperty(OutLineColor , new GUIContent("Outline Color"));
+						ME.ShaderProperty(OutLineSize  , new GUIContent("Outline Scale" ));
 
-					EditorGUI.indentLevel ++;
+						EditorGUI.indentLevel ++;
 
-					if (mat.GetInt("_OutlineFO") == 1) OutlineFoldout = true;
-					OutlineFoldout = EditorGUILayout.Foldout(OutlineFoldout , "Advanced Settings" , EditorStyles.boldFont);
+						if (mat.GetInt("_OutlineFO") == 1) OutlineFoldout = true;
+						OutlineFoldout = EditorGUILayout.Foldout(OutlineFoldout , "Advanced Settings" , EditorStyles.boldFont);
 
-					if (OutlineFoldout) {
-						mat.SetInt("_OutlineFO" , 1);
+						if (OutlineFoldout) {
+							mat.SetInt("_OutlineFO" , 1);
 
-						ME.ShaderProperty(OutLineLighting  , new GUIContent("Use Light Color" ));
-						ME.ShaderProperty(OutLineTexColor  , new GUIContent("Use Main Texture"));
-						ME.TexturePropertySingleLine(new GUIContent("Outline Texture") , OutLineTexture);
-						ME.ShaderProperty(OutLineFixScale  , new GUIContent("x10 Scale"       ));
-					} else {
-						mat.SetInt("_OutlineFO" , 0);
+							ME.ShaderProperty(OutLineLighting  , new GUIContent("Use Light Color" ));
+							ME.ShaderProperty(OutLineTexColor  , new GUIContent("Use Main Texture"));
+							ME.TexturePropertySingleLine(new GUIContent("Outline Texture") , OutLineTexture);
+							ME.ShaderProperty(OutLineFixScale  , new GUIContent("x10 Scale"       ));
+						} else {
+							mat.SetInt("_OutlineFO" , 0);
+						}
+
+						EditorGUI.indentLevel --;
+
 					}
+				}
+			} else {
+				GUILayout.Label("Fur", EditorStyles.boldLabel);
+				
+				using (new EditorGUILayout.VerticalScope("box")) {
+					ME.ShaderProperty(FurEnable , new GUIContent("Enable Fur"));
+					if (FurEnable.floatValue >= 0.5) {
 
-					EditorGUI.indentLevel --;
+						EditorGUILayout.HelpBox("ファー機能は試験的な実装です。" , MessageType.Info);
 
+						ME.TexturePropertySingleLine(new GUIContent("Fur Mask") , FurMask);
+						ME.ShaderProperty(FurColor     , new GUIContent("Fur Color"      ));
+
+						ME.ShaderProperty(FurLength    , new GUIContent("Fur Length"     ));
+						ME.ShaderProperty(FurWidth     , new GUIContent("Fur Width"      ));
+						ME.ShaderProperty(FurRoughness , new GUIContent("Fur Roughness"  ));
+						ME.ShaderProperty(FurFixScale  , new GUIContent("x100 Length"    ));
+
+						ME.ShaderProperty(FurShapeMode , new GUIContent("Fur Shape Generator" ));
+						EditorGUI.indentLevel ++;
+						if (FurShapeMode.floatValue >= 8.0) ME.TexturePropertySingleLine(new GUIContent("Fur Shape Texture") , FurShapeTex);
+						EditorGUI.indentLevel --;
+
+						ME.ShaderProperty(FurGravity  , new GUIContent("Fur Gravity"     ));
+					}
 				}
 			}
 
@@ -982,12 +1041,48 @@ namespace SunaoShader {
 
 					using (new EditorGUILayout.VerticalScope("box")) {
 
-						GUILayout.Label("Shader Modes" , EditorStyles.boldLabel);
+						GUILayout.Label("Rendering" , EditorStyles.boldLabel);
 
-						ME.ShaderProperty(Culling         , new GUIContent("Culling Mode"    ));
-						ME.ShaderProperty(EnableZWrite    , new GUIContent("Enable Z Write"  ));
+						ME.ShaderProperty(Culling         , new GUIContent("Culling Mode"        ));
+						ME.ShaderProperty(EnableZWrite    , new GUIContent("Enable Z Write"      ));
 						if (Shader_Cutout || Shader_Stencil) {
-							ME.ShaderProperty(AlphaToMask  , new GUIContent("Enable Cutout MSAA"));
+							ME.ShaderProperty(AlphaToMask  , new GUIContent("Enable Cutout MSAA" ));
+						}
+
+						ME.ShaderProperty(SSFallback       , new GUIContent("VRC Fallback Shader"));
+						if (SSFallback.floatValue == 0.0f) {
+							if (Culling.floatValue == 0.0f) {
+								if (Shader_Opaque     ) mat.SetOverrideTag("VRCFallback" , "ToonDoubleSided"           );
+								if (Shader_Transparent) mat.SetOverrideTag("VRCFallback" , "ToonTransparentDoubleSided");
+								if (Shader_Cutout)      mat.SetOverrideTag("VRCFallback" , "ToonCutoutDoubleSided"     );
+								if (Shader_StencilOut)  mat.SetOverrideTag("VRCFallback" , "ToonCutoutDoubleSided"     );
+								if (Shader_Stencil)     mat.SetOverrideTag("VRCFallback" , "ToonCutoutDoubleSided"     );
+								if (Shader_Fur)         mat.SetOverrideTag("VRCFallback" , "ToonDoubleSided"           );
+							} else {
+								if (Shader_Opaque     ) mat.SetOverrideTag("VRCFallback" , "Toon"                      );
+								if (Shader_Transparent) mat.SetOverrideTag("VRCFallback" , "ToonTransparent"           );
+								if (Shader_Cutout)      mat.SetOverrideTag("VRCFallback" , "ToonCutout"                );
+								if (Shader_StencilOut)  mat.SetOverrideTag("VRCFallback" , "ToonCutout"                );
+								if (Shader_Stencil)     mat.SetOverrideTag("VRCFallback" , "ToonCutout"                );
+								if (Shader_Fur)         mat.SetOverrideTag("VRCFallback" , "Toon"                      );
+							}
+						}
+						if (SSFallback.floatValue == 1.0f) {
+							mat.SetOverrideTag("VRCFallback" , "Standard");
+						}
+						if (SSFallback.floatValue == 2.0f) {
+							if (Culling.floatValue == 0.0f) {
+								mat.SetOverrideTag("VRCFallback" , "ToonDoubleSided"      );
+							} else {
+								mat.SetOverrideTag("VRCFallback" , "Toon"                 );
+							}
+						}
+						if (SSFallback.floatValue == 3.0f) {
+							if (Culling.floatValue == 0.0f) {
+								mat.SetOverrideTag("VRCFallback" , "ToonCutoutDoubleSided");
+							} else {
+								mat.SetOverrideTag("VRCFallback" , "ToonCutout"           );
+							}
 						}
 					}
 

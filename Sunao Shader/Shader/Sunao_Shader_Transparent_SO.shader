@@ -1,5 +1,5 @@
 ﻿//--------------------------------------------------------------
-//              Sunao Shader    Ver 1.5.4
+//              Sunao Shader    Ver 1.6.1
 //
 //                      Copyright (c) 2022 揚茄子研究所
 //                              Twitter : @SUNAO_VRC
@@ -15,8 +15,10 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 	Properties {
 
 		[HideInInspector] _VersionH        ("Version H"         , int) = 1
-		[HideInInspector] _VersionM        ("Version M"         , int) = 5
-		[HideInInspector] _VersionL        ("Version L"         , int) = 4
+		[HideInInspector] _VersionM        ("Version M"         , int) = 6
+		[HideInInspector] _VersionL        ("Version L"         , int) = 1
+
+		[HideInInspector] _SunaoShaderType ("ShaderType"        , int) = 4
 
 		[NoScaleOffset]
 		_MainTex           ("Main Texture"              , 2D) = "white" {}
@@ -83,7 +85,7 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 		_DecalAnimY        ("Animation Y Size"          , int) = 1
 
 
-		_StencilNumb       ("Stencil Number"            , int) = 2
+		_StencilNumb       ("Stencil Number"            , int) = 4
 		[Enum(NotEqual , 6 , Equal , 3 , Less , 2 , LessEqual , 4 , Greater , 5 , GreaterEqual , 7)]
 		_StencilCompMode   ("Stencil Compare Mode"      , int) = 6
 
@@ -106,8 +108,7 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 		_LightMask         ("Lighting Boost Mask"       , 2D) = "black" {}
 		_LightBoost        ("Lighting Boost"            , Range( 1.0,  5.0)) = 3.0
 		_Unlit             ("Unlighting"                , Range( 0.0,  1.0)) = 0.0
-		[SToggle]
-		_MonochromeLit     ("Monochrome Lighting"       , int) = 0
+		_MonochromeLit     ("Monochrome Lighting"       , Range( 0.0,  1.0)) = 0.0
 
 
 		[SToggle]
@@ -239,6 +240,27 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 		_IgnoreTexAlphaRL  ("Ignore Texture Alpha"      , int) = 0
 
 
+		[SToggle]
+		_FurEnable           ("Enable Fur"              , int) = 0
+		_FurMask             ("Fur Mask"                , 2D) = "white" {}
+		_FurColor            ("Fur Color"               , Color) = (1,1,1,1)
+		_FurLength           ("Fur Length"              , Range( 0.0,  1.0)) = 0.5
+		_FurWidth            ("Fur Width"               , Range( 0.0,  1.0)) = 0.3
+		_FurRoughness        ("Fur Roughness"           , Range( 0.0,  1.0)) = 0.2
+		[SToggle]
+		_FurFixScale         ("x100 Length"             , int) = 0
+		[SToggle]
+		_FurTexColor         ("Use Main Color"          , int) = 1
+		_FurTex              ("Fur Texture"             , 2D) = "white" {}
+		[Enum(Internal1 , 0 , Internal2 , 1 , Custom , 8)]
+		_FurShapeMode        ("Fur Shape Mode"          , int) = 0
+		_FurShapeTex         ("Fur Shape Texture"       , 2D) = "black" {}
+		_FurDirection        ("Fur Direction"           , 2D) = "bump" {}
+		_FurGravity          ("Fur Gravity"             , Range(-1.0,  1.0)) = 0.0
+		[SToggle]
+		_FurLighting         ("Use Lighting"            , int) = 1
+
+
 		[Enum(Off , 0 , Back , 2 , Front , 1)]
 		_Culling           ("Culling"                   , int) = 2
 
@@ -247,6 +269,12 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 
 		[SToggle]
 		_AlphaToMask       ("Cutout MSAA"               , int) = 0
+
+		[SToggle]
+		_IgnoreProjector   ("Ignore Projector"          , int) = 0
+
+		[Enum(Toon , 0 , Standard , 1 , ForceToonOpaque , 2 , ForceToonCutout , 3)]
+		_SSFallback        ("Fallback Shader"           , int) = 0
 
 		_DirectionalLight  ("Directional Light"         , Range( 0.0,  2.0)) = 1.0
 		_SHLight           ("SH Light"                  , Range( 0.0,  2.0)) = 1.0
@@ -280,8 +308,6 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 		[HideInInspector] _ReflectionFO    ("Reflection FO"     , int) = 0
 		[HideInInspector] _RimLightingFO   ("Rim Lighting FO"   , int) = 0
 		[HideInInspector] _OtherSettingsFO ("Other Settings FO" , int) = 0
-
-		[HideInInspector] _SunaoShaderType ("ShaderType"        , int) = 4
 	}
 
 
@@ -295,14 +321,13 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 			"RenderType"      = "Transparent"
 			"Queue"           = "Transparent-1"
 			"VRCFallback"     = "ToonTransparent"
-			"VRCFallback"     = "ToonFade"
 		}
 
 		Pass {
 			Tags { "LightMode"  = "ForwardBase" }
 
 			Cull [_Culling]
-			Blend SrcAlpha OneMinusSrcAlpha
+			Blend SrcAlpha OneMinusSrcAlpha , One One
 			ZWrite [_EnableZWrite]
 
 			Stencil {
@@ -333,7 +358,7 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 			Tags { "LightMode"  = "ForwardBase" }
 
 			Cull Front
-			Blend SrcAlpha OneMinusSrcAlpha
+			Blend SrcAlpha OneMinusSrcAlpha , One One
 			ZWrite [_EnableZWrite]
 
 			Stencil {
@@ -350,7 +375,7 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 			#pragma only_renderers d3d11 metal
 			#pragma fragmentoption ARB_precision_hint_fastest
 
-			#define PASS_OL_FB
+			#define PASS_FB
 			#define TRANSPARENT
 
 			#include "./Cginc/SunaoShader_OL.cginc"
@@ -405,7 +430,7 @@ Shader "Sunao Shader/[Stencil Outline]/Transparent" {
 			#pragma only_renderers d3d11 metal
 			#pragma fragmentoption ARB_precision_hint_fastest
 
-			#define PASS_OL_FA
+			#define PASS_FA
 			#define TRANSPARENT
 
 			#include "./Cginc/SunaoShader_OL.cginc"

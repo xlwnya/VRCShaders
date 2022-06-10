@@ -7,28 +7,27 @@
 //-------------------------------------Include
 
 	#include "UnityCG.cginc"
-	#include "SunaoShader_Function.cginc"
 
 //-------------------------------------変数宣言
 
-	uniform sampler2D _MainTex;
-	uniform float4    _MainTex_ST;
-	uniform float4    _Color;
-	uniform float     _Cutout;
-	uniform float     _Alpha;
-	uniform sampler2D _AlphaMask;
-	uniform float     _AlphaMaskStrength;
-	uniform float     _UVScrollX;
-	uniform float     _UVScrollY;
-	uniform float     _UVAnimation;
-	uniform uint      _UVAnimX;
-	uniform uint      _UVAnimY;
-	uniform bool      _UVAnimOtherTex;
-	uniform bool      _OutLineEnable;
-	uniform sampler2D _OutLineMask;
-	uniform float     _OutLineSize;
-	uniform bool      _OutLineFixScale;
-	uniform uint      _Culling;
+	sampler2D _MainTex;
+	float4    _MainTex_ST;
+	float4    _Color;
+	float     _Cutout;
+	float     _Alpha;
+	sampler2D _AlphaMask;
+	float     _AlphaMaskStrength;
+	float     _UVScrollX;
+	float     _UVScrollY;
+	float     _UVAnimation;
+	uint      _UVAnimX;
+	uint      _UVAnimY;
+	bool      _UVAnimOtherTex;
+	bool      _OutLineEnable;
+	sampler2D _OutLineMask;
+	float     _OutLineSize;
+	bool      _OutLineFixScale;
+	uint      _Culling;
 
 //-------------------------------------頂点シェーダ入力構造体
 
@@ -48,9 +47,12 @@ struct VOUT {
 	float  vadd        : VERTEXADD;
 
 	V2F_SHADOW_CASTER;
+
 	UNITY_VERTEX_INPUT_INSTANCE_ID
 	UNITY_VERTEX_OUTPUT_STEREO
 };
+
+	#include "SunaoShader_Function.cginc"
 
 //-------------------------------------頂点シェーダ
 
@@ -60,7 +62,6 @@ VOUT vert (VIN v) {
 
 	UNITY_INITIALIZE_OUTPUT(VOUT , o);
 	UNITY_SETUP_INSTANCE_ID(v);
-	UNITY_TRANSFER_INSTANCE_ID(v, o);
 	UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 //----視線
@@ -104,6 +105,8 @@ VOUT vert (VIN v) {
 
 	TRANSFER_SHADOW_CASTER(o)
 
+	UNITY_TRANSFER_INSTANCE_ID(v , o);
+
 	return o;
 }
 
@@ -111,6 +114,7 @@ VOUT vert (VIN v) {
 //-------------------------------------フラグメントシェーダ
 
 float4 frag (VOUT IN , bool IsFrontFace : SV_IsFrontFace) : COLOR {
+
 	UNITY_SETUP_INSTANCE_ID(IN);
 	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
 

@@ -9,7 +9,7 @@
 // see LICENSE or http://suna.ooo/agenasulab/ss/LICENSE
 //--------------------------------------------------------------
 
-Shader "Sunao Shader/[Stencil Outline]/Cutout" {
+Shader "Sunao Shader/Fur" {
 
 
 	Properties {
@@ -18,7 +18,7 @@ Shader "Sunao Shader/[Stencil Outline]/Cutout" {
 		[HideInInspector] _VersionM        ("Version M"         , int) = 6
 		[HideInInspector] _VersionL        ("Version L"         , int) = 1
 
-		[HideInInspector] _SunaoShaderType ("ShaderType"        , int) = 5
+		[HideInInspector] _SunaoShaderType ("ShaderType"        , int) = 8
 
 		[NoScaleOffset]
 		_MainTex           ("Main Texture"              , 2D) = "white" {}
@@ -245,8 +245,8 @@ Shader "Sunao Shader/[Stencil Outline]/Cutout" {
 		_FurMask             ("Fur Mask"                , 2D) = "white" {}
 		_FurColor            ("Fur Color"               , Color) = (1,1,1,1)
 		_FurLength           ("Fur Length"              , Range( 0.0,  1.0)) = 0.5
-		_FurWidth            ("Fur Width"               , Range( 0.0,  1.0)) = 0.3
-		_FurRoughness        ("Fur Roughness"           , Range( 0.0,  1.0)) = 0.2
+		_FurWidth            ("Fur Width"               , Range( 0.0,  1.0)) = 0.4
+		_FurRoughness        ("Fur Roughness"           , Range( 0.0,  1.0)) = 0.3
 		[SToggle]
 		_FurFixScale         ("x100 Length"             , int) = 0
 		[SToggle]
@@ -318,36 +318,29 @@ Shader "Sunao Shader/[Stencil Outline]/Cutout" {
 
 		Tags {
 			"IgnoreProjector" = "True"
-			"RenderType"      = "TransparentCutout"
-			"Queue"           = "AlphaTest"
-			"VRCFallback"     = "ToonCutoutDoubleSided"
+			"RenderType"      = "Transparent"
+			"Queue"           = "Transparent-1"
+			"VRCFallback"     = "ToonDoubleSided"
 		}
-
 
 		Pass {
 			Tags { "LightMode"  = "ForwardBase" }
 
 			Cull [_Culling]
+			Blend SrcAlpha OneMinusSrcAlpha , Zero One
 			ZWrite [_EnableZWrite]
-			AlphaToMask [_AlphaToMask]
-
-			Stencil {
-				Ref  [_StencilNumb]
-				Comp Always
-				Pass Replace
-			}
 
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
-			#pragma target 4.5
-			#pragma only_renderers d3d11 metal
+			#pragma target 4.6
+			#pragma only_renderers d3d11
 			#pragma fragmentoption ARB_precision_hint_fastest
 
 			#define PASS_FB
-			#define CUTOUT
+			#define TRANSPARENT
 
 			#include "./Cginc/SunaoShader_Core.cginc"
 
@@ -358,38 +351,34 @@ Shader "Sunao Shader/[Stencil Outline]/Cutout" {
 		Pass {
 			Tags { "LightMode"  = "ForwardBase" }
 
-			Cull Front
-			ZWrite [_EnableZWrite]
-			AlphaToMask [_AlphaToMask]
-
-			Stencil {
-				Ref  [_StencilNumb]
-				Comp NotEqual
-			}
+			Cull Off
+			Blend SrcAlpha OneMinusSrcAlpha , Zero One
+			ZWrite Off
 
 			CGPROGRAM
 			#pragma vertex vert
+			#pragma geometry geom
 			#pragma fragment frag
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
-			#pragma target 4.5
-			#pragma only_renderers d3d11 metal
+			#pragma target 4.6
+			#pragma only_renderers d3d11
 			#pragma fragmentoption ARB_precision_hint_fastest
 
 			#define PASS_FB
-			#define CUTOUT
+			#define TRANSPARENT
+			#define FUR
 
-			#include "./Cginc/SunaoShader_OL.cginc"
+			#include "./Cginc/SunaoShader_FR.cginc"
 
 			ENDCG
 		}
-
 
 		Pass {
 			Tags { "LightMode"  = "ForwardAdd" }
 
 			Cull [_Culling]
-			Blend One OneMinusSrcAlpha , Zero One
+			Blend One OneMinusSrcAlpha , One One
 			ZWrite Off
 
 			CGPROGRAM
@@ -397,12 +386,12 @@ Shader "Sunao Shader/[Stencil Outline]/Cutout" {
 			#pragma fragment frag
 			#pragma multi_compile_fwdadd
 			#pragma multi_compile_fog
-			#pragma target 4.5
-			#pragma only_renderers d3d11 metal
+			#pragma target 4.6
+			#pragma only_renderers d3d11
 			#pragma fragmentoption ARB_precision_hint_fastest
 
 			#define PASS_FA
-			#define CUTOUT
+			#define TRANSPARENT
 
 			#include "./Cginc/SunaoShader_Core.cginc"
 
@@ -413,28 +402,25 @@ Shader "Sunao Shader/[Stencil Outline]/Cutout" {
 		Pass {
 			Tags { "LightMode"  = "ForwardAdd" }
 
-			Cull Front
-			Blend One OneMinusSrcAlpha , Zero One
+			Cull Off
+			Blend One OneMinusSrcAlpha , One One
 			ZWrite Off
-
-			Stencil {
-				Ref  [_StencilNumb]
-				Comp NotEqual
-			}
 
 			CGPROGRAM
 			#pragma vertex vert
+			#pragma geometry geom
 			#pragma fragment frag
 			#pragma multi_compile_fwdadd
 			#pragma multi_compile_fog
-			#pragma target 4.5
-			#pragma only_renderers d3d11 metal
+			#pragma target 4.6
+			#pragma only_renderers d3d11
 			#pragma fragmentoption ARB_precision_hint_fastest
 
 			#define PASS_FA
-			#define CUTOUT
+			#define TRANSPARENT
+			#define FUR
 
-			#include "./Cginc/SunaoShader_OL.cginc"
+			#include "./Cginc/SunaoShader_FR.cginc"
 
 			ENDCG
 		}
@@ -451,12 +437,12 @@ Shader "Sunao Shader/[Stencil Outline]/Cutout" {
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma multi_compile_shadowcaster
-			#pragma target 4.5
-			#pragma only_renderers d3d11 metal
+			#pragma target 4.6
+			#pragma only_renderers d3d11
 			#pragma fragmentoption ARB_precision_hint_fastest
 
 			#define PASS_SC
-			#define CUTOUT
+			#define TRANSPARENT
 
 			#include "./Cginc/SunaoShader_SC.cginc"
 

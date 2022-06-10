@@ -10,7 +10,6 @@ VOUT vert (VIN v) {
 
 	UNITY_INITIALIZE_OUTPUT(VOUT , o);
 	UNITY_SETUP_INSTANCE_ID(v);
-	UNITY_TRANSFER_INSTANCE_ID(v, o);
 	UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 //-------------------------------------頂点座標変換
@@ -116,9 +115,9 @@ VOUT vert (VIN v) {
 		o.shmax      = SHLightMax(SHColor) * _SHLight;
 		o.shmin      = SHLightMin(SHColor) * _SHLight;
 
-		if (_MonochromeLit) {
-			o.shmax  = MonoColor(o.shmax);
-			o.shmin  = MonoColor(o.shmin);
+		if (_MonochromeLit > 0.0f) {
+			o.shmax  = lerp(o.shmax , MonoColor(o.shmax) , _MonochromeLit);
+			o.shmin  = lerp(o.shmin , MonoColor(o.shmin) , _MonochromeLit);
 		}
 
 		o.shmax      = max(o.shmax , _MinimumLight        );
@@ -147,6 +146,11 @@ VOUT vert (VIN v) {
 			o.vlatn   = (float4)0.0f;
 
 		#endif
+	#endif
+
+//-------------------------------------ポイントライト
+	#ifdef PASS_FA
+		UNITY_TRANSFER_LIGHTING(o , v.uv1);
 	#endif
 
 //-------------------------------------Toon
@@ -224,14 +228,11 @@ VOUT vert (VIN v) {
 	       Matrix_V  = lerp(float3(0.0f , 1.0f , 0.0f) , Matrix_V , CamRotY);
 	o.vfront  = normalize(Matrix_V);
 
-//-------------------------------------ポイントライト
-	#ifdef PASS_FA
-		UNITY_TRANSFER_LIGHTING(o , v.uv1);
-	#endif
-
 //-------------------------------------フォグ
 	UNITY_TRANSFER_FOG(o,o.pos);
 
+
+	UNITY_TRANSFER_INSTANCE_ID(v , o);
 
 	return o;
 }
