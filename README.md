@@ -5,6 +5,7 @@ Note: Some shaders are modified from original.
 LICENSE: See each shader's LICENSE/README.
 
 * arktoon Shaders: MIT https://github.com/synqark/Arktoon-Shaders
+* lilToon: MIT https://github.com/lilxyzw/lilToon
 * MMS3: MIT https://miniscape.booth.pm/items/1627422
 * MnMrShader2: MIT https://miniscape.booth.pm/items/1264065
 * MToon: MIT https://github.com/Santarh/MToon
