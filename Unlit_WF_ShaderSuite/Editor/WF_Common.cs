@@ -31,8 +31,17 @@ namespace UnlitWF
 {
     internal static class WFCommonUtility
     {
+        /// <summary>
+        /// GUIに表示されるDisplayNameのパターン
+        /// </summary>
         private static readonly Regex PAT_DISP_NAME = new Regex(@"^\[(?<label>[A-Z][A-Z0-9]*)\]\s+(?<name>.+)$", RegexOptions.Compiled);
+        /// <summary>
+        /// マテリアルに保存されるプロパティ名のパターン
+        /// </summary>
         private static readonly Regex PAT_PROP_NAME = new Regex(@"^_(?<prefix>[A-Z][A-Z0-9]*)_(?<name>.+?)(?<suffix>(?:_\d+)?)$", RegexOptions.Compiled);
+        /// <summary>
+        /// ENABLEキーワードのパターン
+        /// </summary>
         private static readonly Regex PAT_ENABLE_KEYWORD = new Regex(@"^_(?<prefix>[A-Z][A-Z0-9]*)_((?<func>[A-Z0-9]+)_)?ENABLE(?<suffix>(?:_\d+)?)$", RegexOptions.Compiled);
 
         /// <summary>
@@ -136,6 +145,16 @@ namespace UnlitWF
             return label != null && name.ToLower() == "enable";
         }
 
+        public static bool IsPropertyTrue(Material mat, string prop_name)
+        {
+            return IsPropertyTrue(mat.GetFloat(prop_name));
+        }
+
+        public static bool IsPropertyTrue(float value)
+        {
+            return 0.001f < Math.Abs(value);
+        }
+
         /// <summary>
         /// 見つけ次第削除するシェーダキーワード
         /// </summary>
@@ -175,7 +194,7 @@ namespace UnlitWF
                     continue;
                 }
                 bool changed = false;
-                foreach (var prop_name in getAllPropertyNames(mat.shader))
+                foreach (var prop_name in WFAccessor.GetAllPropertyNames(mat.shader))
                 {
                     // 対応するキーワードが指定されているならばそれを設定する
                     var kwd = WFShaderDictionary.SpecialPropNameToKeywordMap.GetValueOrNull(prop_name);
@@ -198,20 +217,14 @@ namespace UnlitWF
                     Debug.LogFormat("[WF] {0} has {1} keywords {2}", mat, mat.shaderKeywords.Length, string.Join(" ", mat.shaderKeywords.OrderBy(k => k)));
 #endif
                 }
-            }
-        }
-
-        private static void SetEnableKeyword(Material mat, string kwd, bool value)
-        {
-            if (mat.IsKeywordEnabled(kwd) != value)
-            {
-                if (value)
+                // _ES_ENABLE に連動して MaterialGlobalIlluminationFlags を設定する
+                if (mat.HasProperty("_ES_Enable"))
                 {
-                    mat.EnableKeyword(kwd);
-                }
-                else
-                {
-                    mat.DisableKeyword(kwd);
+                    var flag = mat.GetInt("_ES_Enable") != 0 ? MaterialGlobalIlluminationFlags.BakedEmissive : MaterialGlobalIlluminationFlags.None;
+                    if (mat.globalIlluminationFlags != flag)
+                    {
+                        mat.globalIlluminationFlags = flag;
+                    }
                 }
             }
         }
@@ -227,7 +240,7 @@ namespace UnlitWF
             {
                 return; // なにもしない
             }
-            var newShader = Shader.Find(name);
+            var newShader = FindShader(name);
             if (newShader != null)
             {
                 Undo.RecordObjects(mats, "change shader");
@@ -237,33 +250,167 @@ namespace UnlitWF
                     {
                         continue;
                     }
-                    var oldShader = m.shader;
+                    var oldM = new Material(m);
 
                     // 初期化処理の呼び出し (カスタムエディタを取得してAssignNewShaderToMaterialしたかったけど手が届かなかったので静的アクセス)
                     if (WF_DebugViewEditor.IsSupportedShader(newShader))
                     {
-                        WF_DebugViewEditor.PreChangeShader(m, oldShader, newShader);
+                        WF_DebugViewEditor.PreChangeShader(m, oldM.shader, newShader);
                     }
                     else if (ShaderCustomEditor.IsSupportedShader(newShader))
                     {
-                        ShaderCustomEditor.PreChangeShader(m, oldShader, newShader);
+                        ShaderCustomEditor.PreChangeShader(m, oldM.shader, newShader);
                     }
                     // マテリアルにシェーダ割り当て
                     m.shader = newShader;
                     // 初期化処理の呼び出し (カスタムエディタを取得してAssignNewShaderToMaterialしたかったけど手が届かなかったので静的アクセス)
                     if (WF_DebugViewEditor.IsSupportedShader(newShader))
                     {
-                        WF_DebugViewEditor.PostChangeShader(m, oldShader, newShader);
+                        WF_DebugViewEditor.PostChangeShader(oldM, m, oldM.shader, newShader);
                     }
                     else if (ShaderCustomEditor.IsSupportedShader(newShader))
                     {
-                        ShaderCustomEditor.PostChangeShader(m, oldShader, newShader);
+                        ShaderCustomEditor.PostChangeShader(oldM, m, oldM.shader, newShader);
                     }
                 }
             }
             else
             {
                 Debug.LogErrorFormat("[WF][Common] Shader Not Found in this projects: {0}", name);
+            }
+        }
+
+        /// <summary>
+        /// 指定名称の Shader を検索して返す。
+        /// もし名称が UnlitWF/ で始まる場合、アセットパスを元に並び替えて先頭の Shader を返却する。
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static Shader FindShader(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+            if (!name.StartsWith("UnlitWF/"))
+            {
+                // もしシェーダ名が UnlitWF/ で始まらないならばサポート外シェーダへの切り替えなので通常の Shader.Find を使う
+                // IsSupportedShader はここでは使わない (Custom/UnlitWF/ のように ShaderCustomEditor を使う独自シェーダはこちらに倒す)
+                return Shader.Find(name);
+            }
+
+            // 全シェーダをロードしてしまうとAssetDatabase.FindAssetsでも高速に切り替えられるのでGetAllShaderInfoは使用しない
+            //var cnt = ShaderUtil.GetAllShaderInfo().Count(si => si.name == name);
+            //if (cnt <= 1)
+            //{
+            //    // もし同一名称の Shader が複数存在しないのであれば、通常の Shader.Find を使う
+            //    return Shader.Find(name);
+            //}
+
+            // 同一名称の Shader からひとつを選択する
+            var shaders = AssetDatabase.FindAssets("t:Shader")
+                // パスを取得
+                .Select(guid => AssetDatabase.GUIDToAssetPath(guid)).Where(path => !string.IsNullOrWhiteSpace(path))
+                // シェーダをロード
+                .Select(path => new ShaderAndAssetPath(path, AssetDatabase.LoadAssetAtPath<Shader>(path))).Where(sp => sp.shader != null)
+                // 名称の一致するシェーダのみリストアップする
+                .Where(sp => sp.shader.name == name)
+                // 優先度順に並び替える
+                .OrderBy(sp => sp).ToArray();
+            if (shaders.Length == 0)
+            {
+                return null;
+            }
+            if (2 <= shaders.Length)
+            {
+                string msg = "[WF][Common] Multiple Shaders hit: name = " + name;
+                foreach(var sh in shaders)
+                {
+                    msg += "\n  " + sh.path;
+                }
+                Debug.LogWarning(msg);
+            }
+
+            return shaders[0].shader;
+        }
+
+        private class ShaderAndAssetPath : IComparable<ShaderAndAssetPath>
+        {
+            public readonly string path;
+            public readonly Shader shader;
+
+            private readonly bool isMatch;
+            private readonly int root; // 0:Packages, 1:Assets
+            private readonly string parent;
+            private readonly string folder;
+            private readonly string tail;
+
+            public ShaderAndAssetPath(string path, Shader shader)
+            {
+                this.path = path;
+                this.shader = shader;
+
+                this.root = path.StartsWith("Packages/") ? 0 : 1;
+
+                var mm = pattern.Match(path);
+                this.isMatch = mm.Success;
+                if (isMatch)
+                {
+                    this.parent = mm.Groups["parent"].Value;
+                    this.folder = mm.Groups["folder"].Value;
+                    this.tail = mm.Groups["tail"].Value;
+                }
+                else
+                {
+                    this.parent = "";
+                    this.folder = "";
+                    this.tail = path;
+                }
+            }
+
+            private static readonly Regex pattern = new Regex(@"^(?<root>(?:Packages|Assets)(?<parent>/[^/]+)*)/(?<folder>Unlit_?WF_?Shader[A-Za-z]*)/(?<tail>.*)$", RegexOptions.Compiled);
+
+            public int CompareTo(ShaderAndAssetPath other)
+            {
+                int ret;
+
+                // マッチするものはマッチしないものよりも優先
+                ret = -this.isMatch.CompareTo(other.isMatch);
+                if (ret != 0)
+                {
+                    return ret;
+                }
+
+                // Packages は Assets よりも優先
+                ret = -this.root.CompareTo(other.root);
+                if (ret != 0)
+                {
+                    return ret;
+                }
+
+                // parent が浅いものほど優先
+                ret = this.parent.Count(c => c == '/').CompareTo(other.parent.Count(c => c == '/'));
+                if (ret != 0)
+                {
+                    return ret;
+                }
+
+                // parent + folder の辞書順で比較
+                ret = (this.parent + "/" + this.folder).CompareTo(other.parent + "/" + other.folder);
+                if (ret != 0)
+                {
+                    return ret;
+                }
+
+                // tail の長さ順で比較
+                ret = this.tail.Length.CompareTo(other.tail.Length);
+                if (ret != 0)
+                {
+                    return ret;
+                }
+
+                // tail の辞書順で比較
+                return this.tail.CompareTo(other.tail);
             }
         }
 
@@ -309,11 +456,11 @@ namespace UnlitWF
                 return false;
             }
             var name = shader.name;
-            if (name.Contains("FakeFur"))
+            if (name.Contains("_Mobile_") || name.Contains("WF_UnToon_Hidden") || name.Contains("WF_DebugView"))
             {
-                return false;
+                return true;
             }
-            if (name.Contains("Mobile") || name.Contains("_Gem_") || name.Contains("Hidden") || name.Contains("DebugView"))
+            if (WFAccessor.GetShaderQuestSupported(shader))
             {
                 return true;
             }
@@ -328,6 +475,11 @@ namespace UnlitWF
         public static bool IsMobileSupportedShader(Material mat)
         {
             return mat != null && IsMobileSupportedShader(mat.shader);
+        }
+
+        public static bool IsMigrationRequiredMaterial(Material mat)
+        {
+            return mat != null && Converter.WFMaterialMigrationConverter.ExistsNeedsMigration(mat);
         }
 
         /// <summary>
@@ -379,7 +531,121 @@ namespace UnlitWF
             Application.OpenURL(LatestVersion.downloadPage);
         }
 
-        private static IEnumerable<string> getAllPropertyNames(Shader shader)
+        [Obsolete("use WFAccessor")]
+        public static IEnumerable<string> GetAllPropertyNames(Shader shader)
+        {
+            return WFAccessor.GetAllPropertyNames(shader);
+        }
+
+        [Obsolete("use WFAccessor")]
+        public static string GetShaderCurrentVersion(Shader shader)
+        {
+            return WFAccessor.GetShaderCurrentVersion(shader);
+        }
+
+        [Obsolete("use WFAccessor")]
+        public static string GetShaderCurrentVersion(Material mat)
+        {
+            return WFAccessor.GetShaderCurrentVersion(mat);
+        }
+
+        [Obsolete("use WFAccessor")]
+        public static string GetShaderFallBackTarget(Shader shader)
+        {
+            return WFAccessor.GetShaderFallBackTarget(shader);
+        }
+
+        [Obsolete("use WFAccessor")]
+        public static string GetShaderFallBackTarget(Material mat)
+        {
+            return WFAccessor.GetShaderFallBackTarget(mat);
+        }
+
+        [Obsolete("use WFAccessor")]
+        public static bool GetShaderQuestSupported(Shader shader)
+        {
+            return WFAccessor.GetShaderQuestSupported(shader);
+        }
+
+        [Obsolete("use WFAccessor")]
+        public static int GetMaterialRenderQueueValue(Material mat)
+        {
+            return WFAccessor.GetMaterialRenderQueueValue(mat);
+        }
+
+        public static string GetCurrentRenderPipeline()
+        {
+            return WFCommonUtility.IsURP() ? "URP" : "BRP";
+        }
+
+        public static bool IsURP()
+        {
+#if UNITY_2019_1_OR_NEWER
+            return UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+#else
+            return false;
+#endif
+        }
+
+        public const string KWD_EDITOR_HIDE_LMAP = "_WF_EDITOR_HIDE_LMAP";
+
+        public static bool IsKwdEnableHideLmap()
+        {
+            return Shader.IsKeywordEnabled(KWD_EDITOR_HIDE_LMAP);
+        }
+
+        public static void SetKwdEnableHideLmap(bool value)
+        {
+            if (value)
+            {
+                Shader.EnableKeyword(KWD_EDITOR_HIDE_LMAP);
+            }
+            else
+            {
+                Shader.DisableKeyword(KWD_EDITOR_HIDE_LMAP);
+            }
+        }
+    }
+
+    public static class WFAccessor
+    {
+        /// <summary>
+        /// Shader に指定のプロパティが存在するかどうか返す。
+        /// </summary>
+        /// <param name="shader"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static bool HasShaderProperty(Shader shader, string name)
+        {
+            return 0 <= findPropertyIndex(shader, name);
+        }
+
+        /// <summary>
+        /// Shader に指定のプロパティが Texture タイプで存在するかどうか返す。
+        /// </summary>
+        /// <param name="shader"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static bool HasShaderPropertyTexture(Shader shader, string name)
+        {
+            var idx = findPropertyIndex(shader, name);
+            if (idx < 0)
+            {
+                return false;
+            }
+#if UNITY_2019_1_OR_NEWER
+            return shader.GetPropertyType(idx) == UnityEngine.Rendering.ShaderPropertyType.Texture;
+#else
+            return ShaderUtil.GetPropertyType(shader, idx) == ShaderUtil.ShaderPropertyType.TexEnv;
+#endif
+        }
+
+        /// <summary>
+        /// Shader の全てのプロパティ名を返す。
+        /// </summary>
+        /// <param name="shader"></param>
+        /// <returns></returns>
+        public static IEnumerable<string> GetAllPropertyNames(Shader shader)
         {
 #if UNITY_2019_1_OR_NEWER
             for (int idx = 0; idx < shader.GetPropertyCount(); idx++)
@@ -395,30 +661,45 @@ namespace UnlitWF
         }
 
         /// <summary>
-        /// Shaderから指定のnameのプロパティの description を取得する。
+        /// Shader から 指定の名前のプロパティの PropertyIndex を取得する。
         /// </summary>
         /// <param name="shader"></param>
         /// <param name="name"></param>
         /// <returns></returns>
-        private static string getPropertyDescription(Shader shader, string name)
+        private static int findPropertyIndex(Shader shader, string name)
         {
 #if UNITY_2019_1_OR_NEWER
-            var idx = shader.FindPropertyIndex(name);
-            if (0 <= idx)
-            {
-                return shader.GetPropertyDescription(idx);
-            }
-            return null;
+            return shader.FindPropertyIndex(name);
 #else
             for (int idx = ShaderUtil.GetPropertyCount(shader) - 1; 0 <= idx; idx--)
             {
                 if (name == ShaderUtil.GetPropertyName(shader, idx))
                 {
-                    return ShaderUtil.GetPropertyDescription(shader, idx);
+                    return idx;
                 }
             }
-            return null;
+            return -1;
 #endif
+        }
+
+        /// <summary>
+        /// Shader から 指定の名前のプロパティの description を取得する。
+        /// </summary>
+        /// <param name="shader"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        private static string getPropertyDescription(Shader shader, string name, string _default = null)
+        {
+            var idx = findPropertyIndex(shader, name);
+            if (0 <= idx)
+            {
+#if UNITY_2019_1_OR_NEWER
+                return shader.GetPropertyDescription(idx);
+#else
+                return ShaderUtil.GetPropertyDescription(shader, idx);
+#endif
+            }
+            return _default;
         }
 
         /// <summary>
@@ -432,16 +713,6 @@ namespace UnlitWF
         }
 
         /// <summary>
-        /// Material から _CurrentVersion の値を取得する。
-        /// </summary>
-        /// <param name="mat"></param>
-        /// <returns></returns>
-        public static string GetShaderCurrentVersion(Material mat)
-        {
-            return mat == null ? null : GetShaderCurrentVersion(mat.shader);
-        }
-
-        /// <summary>
         /// Shader から _FallBack の値を取得する。
         /// </summary>
         /// <param name="shader"></param>
@@ -452,6 +723,27 @@ namespace UnlitWF
         }
 
         /// <summary>
+        /// Shader から QuestSupported の値を取得する。
+        /// </summary>
+        /// <param name="shader"></param>
+        /// <returns></returns>
+        public static bool GetShaderQuestSupported(Shader shader)
+        {
+            return getPropertyDescription(shader, "_QuestSupported", "false").ToLower() == "true";
+        }
+
+
+        /// <summary>
+        /// Material から _CurrentVersion の値を取得する。
+        /// </summary>
+        /// <param name="mat"></param>
+        /// <returns></returns>
+        public static string GetShaderCurrentVersion(Material mat)
+        {
+            return mat == null ? null : GetShaderCurrentVersion(mat.shader);
+        }
+
+        /// <summary>
         /// Material から _FallBack の値を取得する。
         /// </summary>
         /// <param name="mat"></param>
@@ -459,6 +751,47 @@ namespace UnlitWF
         public static string GetShaderFallBackTarget(Material mat)
         {
             return mat == null ? null : GetShaderFallBackTarget(mat.shader);
+        }
+
+        public static int GetMaterialRenderQueueValue(Material mat)
+        {
+            // Material.renderQueue の値を単に参照すると -1 (FromShader) が取れないので SerializedObject から取得する
+            var so = new SerializedObject(mat);
+            so.Update();
+            var prop = so.FindProperty("m_CustomRenderQueue");
+            if (prop != null)
+            {
+                return prop.intValue;
+            }
+            return mat.renderQueue;
+        }
+
+        public static string GetMaterialRenderType(Material mat)
+        {
+            return mat.GetTag("RenderType", true, "Opaque");
+        }
+
+        public static bool IsMaterialRenderType(Material mat, params string[] tags)
+        {
+            return tags.Contains(GetMaterialRenderType(mat));
+        }
+
+        public static int GetInt(Material mat, string name, int _default)
+        {
+            if (mat.HasProperty(name))
+            {
+                return mat.GetInt(name);
+            }
+            return _default;
+        }
+
+        public static float GetFloat(Material mat, string name, float _default)
+        {
+            if (mat.HasProperty(name))
+            {
+                return mat.GetFloat(name);
+            }
+            return _default;
         }
     }
 
@@ -481,7 +814,7 @@ namespace UnlitWF
                 // 未指定のときはOK
                 return true;
             }
-            return IsPropTrue(mat, enablePropName);
+            return WFCommonUtility.IsPropertyTrue(mat, enablePropName);
         }
 
         protected bool ApplyKeyword(Material mat, string[] kwds, int value)
@@ -521,11 +854,6 @@ namespace UnlitWF
             }
             return true;
         }
-
-        protected static bool IsPropTrue(Material mat, string prop_name)
-        {
-            return 0.001f < Math.Abs(mat.GetFloat(prop_name));
-        }
     }
 
     public class WFCustomKeywordSettingBool : WFCustomKeywordSetting
@@ -539,7 +867,7 @@ namespace UnlitWF
 
         public override bool SetKeywordTo(Material mat)
         {
-            return ApplyKeywordByBool(mat, keyword, IsPropTrue(mat, propertyName));
+            return ApplyKeywordByBool(mat, keyword, WFCommonUtility.IsPropertyTrue(mat, propertyName));
         }
     }
 
@@ -915,17 +1243,21 @@ namespace UnlitWF
 
     internal class WFShaderName
     {
-        public string Familly { get; private set; }
-        public string Variant { get; private set; }
-        public string RenderType { get; private set; }
-        public string Name { get; private set; }
+        public readonly string RenderPipeline;
+        public readonly string Familly;
+        public readonly string Variant;
+        public readonly string RenderType;
+        public readonly string Name;
+        public readonly bool Represent;
 
-        public WFShaderName(string familly, string variant, string renderType, string name)
+        public WFShaderName(string rp, string familly, string variant, string renderType, string name, bool represent = false)
         {
-            this.Familly = familly;
-            this.Variant = variant;
-            this.RenderType = renderType;
-            this.Name = name;
+            RenderPipeline = rp;
+            Familly = familly;
+            Variant = variant;
+            RenderType = renderType;
+            Name = name;
+            Represent = represent;
         }
     }
 
@@ -941,7 +1273,7 @@ namespace UnlitWF
             {
                 return false;
             }
-            return x.Familly == y.Familly && x.Variant == y.Variant;
+            return x.RenderPipeline == y.RenderPipeline && x.Familly == y.Familly && x.Variant == y.Variant;
         }
 
         public int GetHashCode(WFShaderName x)
@@ -950,7 +1282,7 @@ namespace UnlitWF
             {
                 return 0;
             }
-            return x.Familly.GetHashCode() ^ x.Variant.GetHashCode();
+            return x.RenderPipeline.GetHashCode() ^ x.Familly.GetHashCode() ^ x.Variant.GetHashCode();
         }
     }
 
@@ -966,7 +1298,7 @@ namespace UnlitWF
             {
                 return false;
             }
-            return x.Familly == y.Familly && x.RenderType == y.RenderType;
+            return x.RenderPipeline == y.RenderPipeline && x.Familly == y.Familly && x.RenderType == y.RenderType;
         }
 
         public int GetHashCode(WFShaderName x)
@@ -975,15 +1307,36 @@ namespace UnlitWF
             {
                 return 0;
             }
-            return x.Familly.GetHashCode() ^ x.RenderType.GetHashCode();
+            return x.RenderPipeline.GetHashCode() ^ x.Familly.GetHashCode() ^ x.Variant.GetHashCode();
         }
     }
 
     internal static class WFShaderNameDictionary
     {
+        private static IEnumerable<WFShaderName> GetCurrentRpNames()
+        {
+            var rp = WFCommonUtility.GetCurrentRenderPipeline();
+            return WFShaderDictionary.ShaderNameList.Where(nm => nm.RenderPipeline == rp);
+        }
+
         public static WFShaderName TryFindFromName(string name)
         {
-            return WFShaderDictionary.ShaderNameList.Where(nm => nm.Name == name).FirstOrDefault();
+            return GetCurrentRpNames().Where(nm => nm.Name == name).FirstOrDefault();
+        }
+
+        public static List<WFShaderName> GetFamilyList()
+        {
+            var result = new List<WFShaderName>();
+            foreach(var group in GetCurrentRpNames().GroupBy(p => p.Familly))
+            {
+                // Family ごとにグループ化して、Represent が true のものがあればそれを取得、そうでなければ最初の1件を取得してリストに詰める
+                var represent = group.Where(p => p.Represent).Union(group).FirstOrDefault();
+                if (represent != null)
+                {
+                    result.Add(represent);
+                }
+            }
+            return result;
         }
 
         public static List<WFShaderName> GetVariantList(WFShaderName name)
@@ -992,7 +1345,7 @@ namespace UnlitWF
             {
                 return new List<WFShaderName>();
             }
-            return WFShaderDictionary.ShaderNameList.Where(nm => nm.Familly == name.Familly && nm.RenderType == name.RenderType).ToList();
+            return GetCurrentRpNames().Where(nm => nm.Familly == name.Familly && nm.RenderType == name.RenderType).ToList();
         }
 
         public static List<WFShaderName> GetVariantList(WFShaderName name, out List<WFShaderName> other)
@@ -1002,7 +1355,7 @@ namespace UnlitWF
 
             // 異なるVariantのShaderNameをotherに詰める
             other = new List<WFShaderName>();
-            other.AddRange(WFShaderDictionary.ShaderNameList.Where(nm => nm.Familly == name.Familly));
+            other.AddRange(GetCurrentRpNames().Where(nm => nm.Familly == name.Familly));
             other.RemoveAll(a => items.Contains(a.Variant));
 
             return result;
@@ -1014,7 +1367,7 @@ namespace UnlitWF
             {
                 return new List<WFShaderName>();
             }
-            return WFShaderDictionary.ShaderNameList.Where(nm => nm.Familly == name.Familly && nm.Variant == name.Variant).ToList();
+            return GetCurrentRpNames().Where(nm => nm.Familly == name.Familly && nm.Variant == name.Variant).ToList();
         }
 
         public static List<WFShaderName> GetRenderTypeList(WFShaderName name, out List<WFShaderName> other)
@@ -1024,7 +1377,7 @@ namespace UnlitWF
 
             // 異なるRenderTypeのShaderNameをotherに詰める
             other = new List<WFShaderName>();
-            other.AddRange(WFShaderDictionary.ShaderNameList.Where(nm => nm.Familly == name.Familly));
+            other.AddRange(GetCurrentRpNames().Where(nm => nm.Familly == name.Familly && nm.Variant != "Custom"));
             other.RemoveAll(a => items.Contains(a.RenderType));
 
             return result;

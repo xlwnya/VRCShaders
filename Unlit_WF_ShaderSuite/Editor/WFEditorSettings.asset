@@ -17,5 +17,7 @@ MonoBehaviour:
   stripUnusedVariant: 1
   stripFallback: 1
   stripMetaPass: 1
-  stripLodCrossFade: 1
+  stripUnusedLodFade: 1
+  validateSceneMaterials: 1
+  cleanupMaterialsBeforeAvatarBuild: 1
   enableScanProjects: 1

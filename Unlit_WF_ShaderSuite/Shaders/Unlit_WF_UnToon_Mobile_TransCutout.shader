@@ -45,7 +45,6 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
             _MT_Metallic            ("[MT] Metallic", Range(0, 1)) = 1
             _MT_ReflSmooth          ("[MT] Smoothness", Range(0, 1)) = 1
             _MT_Brightness          ("[MT] Brightness", Range(0, 1)) = 0.2
-            _MT_BlendNormal         ("[MT] Blend Normal", Range(0, 1)) = 0.1
             _MT_Monochrome          ("[MT] Monochrome Reflection", Range(0, 1)) = 0
         [Toggle(_)]
             _MT_GeomSpecAA          ("[MT] Geometric Specular AA", Range(0, 1)) = 1
@@ -77,7 +76,6 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
             _HL_MatcapTex           ("[HL] Matcap Sampler", 2D) = "gray" {}
             _HL_MedianColor         ("[HL] Matcap Base Color", Color) = (0.5, 0.5, 0.5, 1)
             _HL_Power               ("[HL] Power", Range(0, 2)) = 1
-            _HL_BlendNormal         ("[HL] Blend Normal", Range(0, 1)) = 0.1
         [NoScaleOffset]
             _HL_MaskTex             ("[HL] Mask Texture (RGB)", 2D) = "white" {}
         [Toggle(_)]
@@ -89,49 +87,52 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
 
         // 階調影
         [WFHeaderToggle(ToonShade)]
-            _TS_Enable              ("[SH] Enable", Float) = 0
+            _TS_Enable              ("[TS] Enable", Float) = 0
         [IntRange]
-            _TS_Steps               ("[SH] Steps", Range(1, 3)) = 2
-            _TS_BaseColor           ("[SH] Base Color", Color) = (1, 1, 1, 1)
-            _TS_1stColor            ("[SH] 1st Shade Color", Color) = (0.81, 0.81, 0.9, 1)
-            _TS_2ndColor            ("[SH] 2nd Shade Color", Color) = (0.68, 0.68, 0.8, 1)
-            _TS_3rdColor            ("[SH] 3rd Shade Color", Color) = (0.595, 0.595, 0.7, 1)
-            _TS_Power               ("[SH] Shade Power", Range(0, 2)) = 1
+            _TS_Steps               ("[TS] Steps", Range(1, 3)) = 2
+            _TS_BaseColor           ("[TS] Base Color", Color) = (1, 1, 1, 1)
+            _TS_1stColor            ("[TS] 1st Shade Color", Color) = (0.81, 0.81, 0.9, 1)
+            _TS_2ndColor            ("[TS] 2nd Shade Color", Color) = (0.68, 0.68, 0.8, 1)
+            _TS_3rdColor            ("[TS] 3rd Shade Color", Color) = (0.595, 0.595, 0.7, 1)
+            _TS_Power               ("[TS] Shade Power", Range(0, 2)) = 1
+            _TS_MinDist             ("[TS] FadeOut Distance (Near)", Range(0, 15)) = 1.0
+            _TS_MaxDist             ("[TS] FadeOut Distance (Far)", Range(0, 15)) = 4.0
         [Toggle(_)]
-            _TS_FixContrast         ("[SH] Dont Ajust Contrast", Range(0, 1)) = 0
-            _TS_1stBorder           ("[SH] 1st Border", Range(0, 1)) = 0.4
-            _TS_2ndBorder           ("[SH] 2nd Border", Range(0, 1)) = 0.2
-            _TS_3rdBorder           ("[SH] 3rd Border", Range(0, 1)) = 0.1
-            _TS_Feather             ("[SH] Feather", Range(0, 0.2)) = 0.05
-            _TS_BlendNormal         ("[SH] Blend Normal", Range(0, 1)) = 0.1
+            _TS_FixContrast         ("[TS] Dont Ajust Contrast", Range(0, 1)) = 0
         [NoScaleOffset]
-            _TS_MaskTex             ("[SH] Anti-Shadow Mask Texture (R)", 2D) = "black" {}
+            _TS_MaskTex             ("[TS] Anti-Shadow Mask Texture (R)", 2D) = "black" {}
         [Toggle(_)]
-            _TS_InvMaskVal          ("[SH] Invert Mask Value", Range(0, 1)) = 0
+            _TS_InvMaskVal          ("[TS] Invert Mask Value", Range(0, 1)) = 0
+        [Header(ToonShade Advance)]
+            _TS_1stBorder           ("[TS] 1st Border", Range(0, 1)) = 0.4
+            _TS_2ndBorder           ("[TS] 2nd Border", Range(0, 1)) = 0.2
+            _TS_3rdBorder           ("[TS] 3rd Border", Range(0, 1)) = 0.1
+            _TS_1stFeather          ("[TS] 1st Feather", Range(0, 0.2)) = 0.05
+            _TS_2ndFeather          ("[TS] 2nd Feather", Range(0, 0.2)) = 0.05
+            _TS_3rdFeather          ("[TS] 3rd Feather", Range(0, 0.2)) = 0.05
 
         // リムライト
         [WFHeaderToggle(RimLight)]
-            _TR_Enable              ("[RM] Enable", Float) = 0
+            _TR_Enable              ("[TR] Enable", Float) = 0
         [HDR]
-            _TR_Color               ("[RM] Rim Color", Color) = (0.8, 0.8, 0.8, 1)
+            _TR_Color               ("[TR] Rim Color", Color) = (0.8, 0.8, 0.8, 1)
         [Enum(ADD,2,ALPHA,1,ADD_AND_SUB,0)]
-            _TR_BlendType           ("[RM] Blend Type", Float) = 0
-            _TR_Power               ("[RM] Power", Range(0, 2)) = 1
-            _TR_Feather             ("[RM] Feather", Range(0, 0.2)) = 0.05
-            _TR_BlendNormal         ("[RM] Blend Normal", Range(0, 1)) = 0
+            _TR_BlendType           ("[TR] Blend Type", Float) = 0
+            _TR_Power               ("[TR] Power", Range(0, 2)) = 1
+            _TR_Feather             ("[TR] Feather", Range(0, 0.2)) = 0.05
         [NoScaleOffset]
-            _TR_MaskTex             ("[RM] Mask Texture (RGB)", 2D) = "white" {}
+            _TR_MaskTex             ("[TR] Mask Texture (RGB)", 2D) = "white" {}
         [Toggle(_)]
-            _TR_InvMaskVal          ("[RM] Invert Mask Value", Range(0, 1)) = 0
+            _TR_InvMaskVal          ("[TR] Invert Mask Value", Range(0, 1)) = 0
         [Header(RimLight Advance)]
-            _TR_PowerTop            ("[RM] Power Top", Range(0, 0.5)) = 0.05
-            _TR_PowerSide           ("[RM] Power Side", Range(0, 0.5)) = 0.1
-            _TR_PowerBottom         ("[RM] Power Bottom", Range(0, 0.5)) = 0.1
+            _TR_PowerTop            ("[TR] Power Top", Range(0, 0.5)) = 0.05
+            _TR_PowerSide           ("[TR] Power Side", Range(0, 0.5)) = 0.1
+            _TR_PowerBottom         ("[TR] Power Bottom", Range(0, 0.5)) = 0.1
 
         // Ambient Occlusion
         [WFHeaderToggle(Ambient Occlusion)]
             _AO_Enable              ("[AO] Enable", Float) = 0
-        [Toggle(_)]
+        [WF_FixUIToggle(1.0)]
             _AO_UseLightMap         ("[AO] Use LightMap", Float) = 1
             _AO_Contrast            ("[AO] Contrast", Range(0, 2)) = 1
             _AO_Brightness          ("[AO] Brightness", Range(-1, 1)) = 0
@@ -147,15 +148,19 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
             _ES_BlendType           ("[ES] Blend Type", Float) = 0
 
         [Header(Emissive Scroll)]
-        [Enum(STANDARD,0,SAWTOOTH,1,SIN_WAVE,2,CONSTANT,3)]
-            _ES_Shape               ("[ES] Wave Type", Float) = 3
-        [Enum(WORLD_SPACE,0,LOCAL_SPACE,1,UV1,2,UV2,3)]
-            _ES_DirType             ("[ES] Direction Type", Float) = 0
+        [Toggle(_)]
+            _ES_ScrollEnable        ("[ES] Enable EmissiveScroll", Float) = 0
+        [Enum(STANDARD,0,SAWTOOTH,1,SIN_WAVE,2)]
+            _ES_SC_Shape            ("[ES] Wave Type", Float) = 0
+        [Enum(WORLD_SPACE,0,LOCAL_SPACE,1,UV,2)]
+            _ES_SC_DirType          ("[ES] Direction Type", Float) = 0
+        [Enum(UV1,0,UV2,1)]
+            _ES_SC_UVType           ("[ES] UV Type", Float) = 0
         [WF_Vector3]
-            _ES_Direction           ("[ES] Direction", Vector) = (0, -10, 0, 0)
-            _ES_LevelOffset         ("[ES] LevelOffset", Range(-1, 1)) = 0
-            _ES_Sharpness           ("[ES] Sharpness", Range(0, 4)) = 1
-            _ES_Speed               ("[ES] ScrollSpeed", Range(0, 8)) = 2
+            _ES_SC_Direction        ("[ES] Direction", Vector) = (0, -10, 0, 0)
+            _ES_SC_LevelOffset      ("[ES] LevelOffset", Range(-1, 1)) = 0
+            _ES_SC_Sharpness        ("[ES] Sharpness", Range(0, 4)) = 1
+            _ES_SC_Speed            ("[ES] ScrollSpeed", Range(0, 8)) = 2
 
         // Lit
         [WFHeader(Lit)]
@@ -178,14 +183,17 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
             _GL_DisableBasePos      ("Disable ObjectBasePos", Range(0, 1)) = 0
 
         [WFHeaderToggle(Light Bake Effects)]
-            _GI_Enable              ("[GI] Enable", Float) = 0
-            _GI_IndirectMultiplier  ("[GI] Indirect Multiplier", Range(0, 2)) = 1
-            _GI_EmissionMultiplier  ("[GI] Emission Multiplier", Range(0, 2)) = 1
-            _GI_IndirectChroma      ("[GI] Indirect Chroma", Range(0, 2)) = 1
+            _LBE_Enable             ("[LBE] Enable", Float) = 0
+            _LBE_IndirectMultiplier ("[LBE] Indirect Multiplier", Range(0, 2)) = 1
+            _LBE_EmissionMultiplier ("[LBE] Emission Multiplier", Range(0, 2)) = 1
+            _LBE_IndirectChroma     ("[LBE] Indirect Chroma", Range(0, 2)) = 1
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/05/29", Float) = 0
+            _CurrentVersion         ("2022/12/17", Float) = 0
+        [HideInInspector]
+        [WF_FixFloat(0.0)]
+            _QuestSupported         ("True", Float) = 0
     }
 
     SubShader {
@@ -210,6 +218,7 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
             #pragma target 3.0
 
             #define _WF_ALPHA_CUTOUT
+            #define _WF_AO_ONLY_LMAP
             #define _WF_MOBILE
 
             #pragma shader_feature_local _ _ES_SCROLL_ENABLE
@@ -229,6 +238,7 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
             #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile _ _WF_EDITOR_HIDE_LMAP
 
             #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE SHADOWS_SHADOWMASK
 
@@ -249,7 +259,9 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransCutout" {
             #pragma fragment frag_meta
 
             #define _WF_ALPHA_CUTOUT
+            #define _WF_MOBILE
 
+            #pragma shader_feature_local _ES_ENABLE
             #pragma shader_feature_local _VC_ENABLE
 
             #pragma shader_feature EDITOR_VISUALIZATION

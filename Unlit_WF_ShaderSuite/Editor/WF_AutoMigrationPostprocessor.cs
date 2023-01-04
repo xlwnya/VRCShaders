@@ -15,24 +15,45 @@
  *  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+/*
+ * NOTE: もしインポート時にダイアログを表示させたくない場合、このcsファイルを削除してください。
+ * If you do not want the dialog to appear on import, delete this cs file.
+ */
+
 #if UNITY_EDITOR
 
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 
 namespace UnlitWF
 {
+    /// <summary>
+    /// マテリアルとシェーダが新規インポートされたタイミングでプロジェクト内をスキャンしてマテリアルをマイグレーションするAssetPostprocessor
+    /// </summary>
     public class WF_AutoMigrationPostprocessor : AssetPostprocessor
     {
-        static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromPath)
+        public static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromPath)
         {
-            ScanAndMigrationExecutor.Migration(importedAssets);
+            // マテリアルのマイグレーション
+            Converter.ScanAndMigrationExecutor.ExecuteMigrationWhenImportMaterial(importedAssets);
+
+            // もしshaderファイルがimportされたなら、そのタイミングで全スキャンも動作させる
+            if (importedAssets.Any(IsSupportedShaderPath))
+            {
+                Converter.ScanAndMigrationExecutor.ExecuteScanWhenImportShader();
+            }
         }
 
-        [InitializeOnLoadMethod]
-        public static void ExecuteAuto()
-        {
-            ScanAndMigrationExecutor.ExecuteAuto();
+        private static readonly Regex regexPath = new Regex(@".*WF_.*\.shader", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+        private static bool IsSupportedShaderPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+            return regexPath.IsMatch(path);
         }
     }
 }

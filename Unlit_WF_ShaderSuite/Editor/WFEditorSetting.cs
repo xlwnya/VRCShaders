@@ -28,15 +28,61 @@ namespace UnlitWF
     {
         public int settingPriority = 0;
 
+        /// <summary>
+        /// ShaderStripping を有効にする
+        /// </summary>
         [Header("Shader Build Settings")]
+        [Tooltip("ShaderStrippingを有効にする")]
         public bool enableStripping = true;
+
+        /// <summary>
+        /// ShaderStripping にて未使用バリアントを削除する
+        /// </summary>
+        [Tooltip("ShaderStrippingにて未使用バリアントを削除する")]
         public bool stripUnusedVariant = true;
+
+        /// <summary>
+        /// ShaderStripping にてFallbackシェーダを削除する
+        /// </summary>
+        [Tooltip("ShaderStrippingにてFallbackシェーダを削除する")]
         public bool stripFallback = true;
+
+        /// <summary>
+        /// ShaderStripping にてMetaパスを削除する
+        /// </summary>
+        [Tooltip("ShaderStrippingにてMetaパスを削除する")]
         public bool stripMetaPass = true;
+
+        /// <summary>
+        /// ShaderStripping にてLODGroupを使っていないなら対象コードを削除する
+        /// </summary>
+        [Tooltip("LODGroupを使っていないならShaderStrippingにて対象コードを削除する")]
         public bool stripUnusedLodFade = true;
 
+        /// <summary>
+        /// ビルド時に古いマテリアルが含まれていないか検査する
+        /// </summary>
+        [Tooltip("ビルド時に古いマテリアルが含まれていないか検査する")]
+        public bool validateSceneMaterials = true;
+
+        /// <summary>
+        /// アバタービルド前にマテリアルをクリンナップする
+        /// </summary>
+        [Tooltip("アバタービルド前にマテリアルをクリンナップする")]
+        public bool cleanupMaterialsBeforeAvatarBuild = true;
+
+        /// <summary>
+        /// shaderインポート時にプロジェクトをスキャンする
+        /// </summary>
         [Header("Editor Behaviour Settings")]
+        [Tooltip("shaderインポート時にプロジェクトをスキャンする")]
         public bool enableScanProjects = true;
+
+        /// <summary>
+        /// materialインポート時にマイグレーションする
+        /// </summary>
+        [Tooltip("materialインポート時にマイグレーションする")]
+        public bool enableMigrationWhenImport = true;
 
         public static WFEditorSetting GetOneOfSettings()
         {
@@ -78,17 +124,28 @@ namespace UnlitWF
         SerializedProperty p_stripFallback;
         SerializedProperty p_stripMetaPass;
         SerializedProperty p_stripUnusedLodFade;
+        SerializedProperty p_validateSceneMaterials;
         SerializedProperty p_enableScanProjects;
+        SerializedProperty p_cleanupMaterialsBeforeAvatarBuild;
+        SerializedProperty p_enableMigrationWhenImport;
 
         private void OnEnable()
         {
             this.p_settingPriority = serializedObject.FindProperty(nameof(WFEditorSetting.settingPriority));
+
+            // Shader Build Settings
             this.p_enableStripping = serializedObject.FindProperty(nameof(WFEditorSetting.enableStripping));
             this.p_stripUnusedVariant = serializedObject.FindProperty(nameof(WFEditorSetting.stripUnusedVariant));
             this.p_stripUnusedLodFade = serializedObject.FindProperty(nameof(WFEditorSetting.stripUnusedLodFade));
             this.p_stripFallback = serializedObject.FindProperty(nameof(WFEditorSetting.stripFallback));
             this.p_stripMetaPass = serializedObject.FindProperty(nameof(WFEditorSetting.stripMetaPass));
+
+            this.p_validateSceneMaterials = serializedObject.FindProperty(nameof(WFEditorSetting.validateSceneMaterials));
+            this.p_cleanupMaterialsBeforeAvatarBuild = serializedObject.FindProperty(nameof(WFEditorSetting.cleanupMaterialsBeforeAvatarBuild));
+
+            // Editor Behaviour Settings
             this.p_enableScanProjects = serializedObject.FindProperty(nameof(WFEditorSetting.enableScanProjects));
+            this.p_enableMigrationWhenImport = serializedObject.FindProperty(nameof(WFEditorSetting.enableMigrationWhenImport));
         }
 
         public override void OnInspectorGUI()
@@ -111,10 +168,13 @@ namespace UnlitWF
                 EditorGUILayout.PropertyField(p_stripFallback);
                 EditorGUILayout.PropertyField(p_stripMetaPass);
             }
+            EditorGUILayout.PropertyField(p_validateSceneMaterials);
+            EditorGUILayout.PropertyField(p_cleanupMaterialsBeforeAvatarBuild);
 
             // Editor Behaviour Settings
 
             EditorGUILayout.PropertyField(p_enableScanProjects);
+            EditorGUILayout.PropertyField(p_enableMigrationWhenImport);
 
             if (EditorGUI.EndChangeCheck())
             {

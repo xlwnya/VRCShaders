@@ -52,7 +52,7 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransparentOverlay" {
         // Ambient Occlusion
         [WFHeaderToggle(Ambient Occlusion)]
             _AO_Enable              ("[AO] Enable", Float) = 0
-        [Toggle(_)]
+        [WF_FixUIToggle(1.0)]
             _AO_UseLightMap         ("[AO] Use LightMap", Float) = 1
             _AO_Contrast            ("[AO] Contrast", Range(0, 2)) = 1
             _AO_Brightness          ("[AO] Brightness", Range(-1, 1)) = 0
@@ -78,14 +78,17 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransparentOverlay" {
             _GL_DisableBasePos      ("Disable ObjectBasePos", Range(0, 1)) = 0
 
         [WFHeaderToggle(Light Bake Effects)]
-            _GI_Enable              ("[GI] Enable", Float) = 0
-            _GI_IndirectMultiplier  ("[GI] Indirect Multiplier", Range(0, 2)) = 1
-            _GI_EmissionMultiplier  ("[GI] Emission Multiplier", Range(0, 2)) = 1
-            _GI_IndirectChroma      ("[GI] Indirect Chroma", Range(0, 2)) = 1
+            _LBE_Enable             ("[LBE] Enable", Float) = 0
+            _LBE_IndirectMultiplier ("[LBE] Indirect Multiplier", Range(0, 2)) = 1
+            _LBE_EmissionMultiplier ("[LBE] Emission Multiplier", Range(0, 2)) = 1
+            _LBE_IndirectChroma     ("[LBE] Indirect Chroma", Range(0, 2)) = 1
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/05/29", Float) = 0
+            _CurrentVersion         ("2022/12/17", Float) = 0
+        [HideInInspector]
+        [WF_FixFloat(0.0)]
+            _QuestSupported         ("True", Float) = 0
     }
 
     SubShader {
@@ -113,6 +116,7 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransparentOverlay" {
             #pragma target 3.0
 
             #define _WF_ALPHA_FRESNEL
+            #define _WF_AO_ONLY_LMAP
             #define _WF_MAIN_Z_SHIFT    (_AL_Z_Offset)
             #define _WF_MOBILE
 
@@ -124,6 +128,7 @@ Shader "UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_TransparentOverlay" {
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
             #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile _ _WF_EDITOR_HIDE_LMAP
 
             #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE SHADOWS_SHADOWMASK
 

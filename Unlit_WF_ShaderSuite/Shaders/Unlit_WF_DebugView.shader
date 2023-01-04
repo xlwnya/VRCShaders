@@ -36,7 +36,7 @@ Shader "UnlitWF/Debug/WF_DebugView" {
         [Header(Lightmap)]
         [IntRange]
         _ModeLightMap               ("show LightMap", Range(0, 2))  = 0
-  
+
         [Header(Other Settings)]
         [ToggleUI]
         _GridEnable                 ("Grid Enable", Range(0, 1))    = 1
@@ -59,7 +59,10 @@ Shader "UnlitWF/Debug/WF_DebugView" {
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/05/29", Float) = 0
+            _CurrentVersion         ("2022/12/17", Float) = 0
+        [HideInInspector]
+        [WF_FixFloat(0.0)]
+            _QuestSupported         ("True", Float) = 0
     }
 
     SubShader
@@ -177,6 +180,7 @@ Shader "UnlitWF/Debug/WF_DebugView" {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
                 float4 color = float4(0, 0, 0, 1);
+                float2 grid_uv;
 
                 // 基本色
                 switch(_ModeColor) {
@@ -195,12 +199,21 @@ Shader "UnlitWF/Debug/WF_DebugView" {
                     case 6:
                         color.rgb = facing ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
                         break;
+                    case 7:
+#ifdef LIGHTMAP_ON
+                        color.rgb = facing ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
+                        grid_uv = saturate(i.uv2 * unity_LightmapST.xy + unity_LightmapST.zw);
+                        color.b = 0;
+#else
+                        grid_uv.xy = 0;
+                        discard;
+#endif
+                        break;
                     default:
                         break;
                 }
 
                 // UV
-                float2 grid_uv;
                 switch(_ModeUV) {
                     case 1:
                         grid_uv = i.uv;

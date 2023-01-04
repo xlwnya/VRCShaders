@@ -38,9 +38,10 @@ namespace UnlitWF
             PreChangeShader(material, oldShader, newShader);
 
             // newShaderの割り当て
+            var oldMat = new Material(material);
             base.AssignNewShaderToMaterial(material, oldShader, newShader);
 
-            PostChangeShader(material, oldShader, newShader);
+            PostChangeShader(oldMat, material, oldShader, newShader);
         }
 
         public static void PreChangeShader(Material material, Shader oldShader, Shader newShader)
@@ -49,11 +50,11 @@ namespace UnlitWF
             if (material != null && oldShader != null && !IsSupportedShader(oldShader))
             {
                 material.SetOverrideTag(TAG_PREV_SHADER, oldShader.name);
-                material.SetOverrideTag(TAG_PREV_QUEUE, material.renderQueue.ToString());
+                material.SetOverrideTag(TAG_PREV_QUEUE, WFAccessor.GetMaterialRenderQueueValue(material).ToString());
             }
         }
 
-        public static void PostChangeShader(Material material, Shader oldShader, Shader newShader)
+        public static void PostChangeShader(Material oldMat, Material material, Shader oldShader, Shader newShader)
         {
             // nop
         }
@@ -168,6 +169,7 @@ namespace UnlitWF
             new DebugModeSection("Model Visualization", new List<DebugMode>(){
                 new DebugMode("Vertex Color", "_ModeColor", 5),
                 new DebugMode("Facing", "_ModeColor", 6),
+                new DebugMode("Facing (Lightmapped Only)", "_ModeColor", 7),
             }),
             new DebugModeSection("UV Visualization", new List<DebugMode>(){
                 new DebugMode("UV1", "_ModeUV", 1),
