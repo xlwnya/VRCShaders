@@ -1,5 +1,5 @@
 ﻿//--------------------------------------------------------------
-//              Sunao Shader    Ver 1.6.1
+//              Sunao Shader    Ver 1.6.2
 //
 //                      Copyright (c) 2022 揚茄子研究所
 //                              Twitter : @SUNAO_VRC
@@ -16,7 +16,7 @@ Shader "Sunao Shader/[Stencil]/Write" {
 
 		[HideInInspector] _VersionH        ("Version H"         , int) = 1
 		[HideInInspector] _VersionM        ("Version M"         , int) = 6
-		[HideInInspector] _VersionL        ("Version L"         , int) = 1
+		[HideInInspector] _VersionL        ("Version L"         , int) = 2
 
 		[HideInInspector] _SunaoShaderType ("ShaderType"        , int) = 7
 
@@ -109,6 +109,11 @@ Shader "Sunao Shader/[Stencil]/Write" {
 		_LightBoost        ("Lighting Boost"            , Range( 1.0,  5.0)) = 3.0
 		_Unlit             ("Unlighting"                , Range( 0.0,  1.0)) = 0.0
 		_MonochromeLit     ("Monochrome Lighting"       , Range( 0.0,  1.0)) = 0.0
+
+		[Enum(Normal , 0 , FromAbove , 1 , FromCamera , 2 , Custom , 3)]
+		_LightDirMode      ("Light Direction Mode"      , int) = 0
+		_CustomLightRotX   ("Custom Light Rotation X"  , Range(-180.0, 180.0)) = 0.0
+		_CustomLightRotY   ("Custom Light Rotation Y"  , Range(-180.0, 180.0)) = 0.0
 
 
 		[SToggle]
@@ -303,6 +308,7 @@ Shader "Sunao Shader/[Stencil]/Write" {
 		[HideInInspector] _DecalFO         ("Decal FO"          , int) = 0
 		[HideInInspector] _ShadingFO       ("Shading FO"        , int) = 0
 		[HideInInspector] _OutlineFO       ("Outline FO"        , int) = 0
+		[HideInInspector] _LightingFO      ("Lighting FO"       , int) = 0
 		[HideInInspector] _EmissionFO      ("Emission FO"       , int) = 0
 		[HideInInspector] _ParallaxFO      ("Parallax FO"       , int) = 0
 		[HideInInspector] _ReflectionFO    ("Reflection FO"     , int) = 0
@@ -390,7 +396,8 @@ Shader "Sunao Shader/[Stencil]/Write" {
 			Tags { "LightMode"  = "ForwardAdd" }
 
 			Cull [_Culling]
-			Blend One OneMinusSrcAlpha , Zero One
+			BlendOp Add , Max
+			Blend One OneMinusSrcAlpha , One One
 			ZWrite Off
 
 			Stencil {
@@ -421,7 +428,8 @@ Shader "Sunao Shader/[Stencil]/Write" {
 			Tags { "LightMode"  = "ForwardAdd" }
 
 			Cull Front
-			Blend One OneMinusSrcAlpha , Zero One
+			BlendOp Add , Max
+			Blend One OneMinusSrcAlpha , One One
 			ZWrite Off
 
 			Stencil {

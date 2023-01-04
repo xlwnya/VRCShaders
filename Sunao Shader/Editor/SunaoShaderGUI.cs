@@ -18,7 +18,7 @@ namespace SunaoShader {
 
 		int     Version_H         = 1;
 		int     Version_M         = 6;
-		int     Version_L         = 1;
+		int     Version_L         = 2;
 
 		MaterialProperty MainTex;
 		MaterialProperty Color;
@@ -80,6 +80,9 @@ namespace SunaoShader {
 		MaterialProperty LightBoost;
 		MaterialProperty Unlit;
 		MaterialProperty MonochromeLit;
+		MaterialProperty LightDirMode;
+		MaterialProperty CustomLightRotX;
+		MaterialProperty CustomLightRotY;
 
 		MaterialProperty OutLineEnable;
 		MaterialProperty OutLineMask;
@@ -197,6 +200,7 @@ namespace SunaoShader {
 		bool    MainFoldout       = false;
 		bool    DecalFoldout      = false;
 		bool    ShadingFoldout    = false;
+		bool    LightingFoldout   = false;
 		bool    OutlineFoldout    = false;
 		bool    EmissionFoldout   = false;
 		bool    ParallaxFoldout   = false;
@@ -322,6 +326,9 @@ namespace SunaoShader {
 			LightBoost        = FindProperty("_LightBoost"        , Prop , false);
 			Unlit             = FindProperty("_Unlit"             , Prop , false);
 			MonochromeLit     = FindProperty("_MonochromeLit"     , Prop , false);
+			LightDirMode      = FindProperty("_LightDirMode"      , Prop , false);
+			CustomLightRotX   = FindProperty("_CustomLightRotX"   , Prop , false);
+			CustomLightRotY   = FindProperty("_CustomLightRotY"   , Prop , false);
 
 			OutLineEnable     = FindProperty("_OutLineEnable"     , Prop , false);
 			OutLineMask       = FindProperty("_OutLineMask"       , Prop , false);
@@ -533,10 +540,9 @@ namespace SunaoShader {
 
 					if (mat.GetInt("_MainFO") == 1) MainFoldout = true;
 					MainFoldout = EditorGUILayout.Foldout(MainFoldout , "Advanced Settings" , EditorStyles.boldFont);
+					mat.SetInt("_MainFO" , Convert.ToInt32(MainFoldout));
 
 					if (MainFoldout) {
-						mat.SetInt("_MainFO" , 1);
-
 						using (new EditorGUILayout.VerticalScope("box")) {
 							ME.TexturePropertySingleLine (new GUIContent("Sub Texture") , SubTex , SubColor);
 							if (SubTex.textureValue != null) {
@@ -577,8 +583,6 @@ namespace SunaoShader {
 						
 						ME.ShaderProperty(UVAnimOtherTex , new GUIContent("Animation Other Texture Maps"));
 
-					} else {
-						mat.SetInt("_MainFO" , 0);
 					}
 
 					EditorGUI.indentLevel --;
@@ -602,10 +606,9 @@ namespace SunaoShader {
 
 						if (mat.GetInt("_DecalFO") == 1) DecalFoldout = true;
 						DecalFoldout = EditorGUILayout.Foldout(DecalFoldout , "Advanced Settings" , EditorStyles.boldFont);
+						mat.SetInt("_DecalFO" , Convert.ToInt32(DecalFoldout));
 
 						if (DecalFoldout) {
-							mat.SetInt("_DecalFO" , 1);
-
 							ME.ShaderProperty(DecalMode        , new GUIContent("Decal Mode"       ));
 							if ((int)DecalMode.floatValue == 3) ME.ShaderProperty(DecalBright   , new GUIContent("Brightness Offset" ));
 							if ((int)DecalMode.floatValue == 4) ME.ShaderProperty(DecalEmission , new GUIContent("Emission Intensity"));
@@ -624,8 +627,6 @@ namespace SunaoShader {
 							if (DecalAnimX.floatValue < 1.0f) mat.SetInt("_DecalAnimX" , 1);
 							if (DecalAnimY.floatValue < 1.0f) mat.SetInt("_DecalAnimY" , 1);
 
-						} else {
-							mat.SetInt("_DecalFO" , 0);
 						}
 
 						EditorGUI.indentLevel --;
@@ -667,16 +668,13 @@ namespace SunaoShader {
 
 					if (mat.GetInt("_ShadingFO") == 1) ShadingFoldout = true;
 					ShadingFoldout = EditorGUILayout.Foldout(ShadingFoldout , "Advanced Settings" , EditorStyles.boldFont);
+					mat.SetInt("_ShadingFO" , Convert.ToInt32(ShadingFoldout));
 
 					if (ShadingFoldout) {
-						mat.SetInt("_ShadingFO" , 1);
-
 						ME.ShaderProperty(ShadeWidth       , new GUIContent("Shade Width"       ));
 						ME.ShaderProperty(ShadeGradient    , new GUIContent("Shade Gradient"    ));
 						ME.ShaderProperty(ShadeColor       , new GUIContent("Shade Color"       ));
 						ME.ShaderProperty(CustomShadeColor , new GUIContent("Custom Shade Color"));
-					} else {
-						mat.SetInt("_ShadingFO" , 0);
 					}
 
 					EditorGUI.indentLevel --;
@@ -704,9 +702,25 @@ namespace SunaoShader {
 						ME.ShaderProperty(LightBoost , new GUIContent("Lighting Boost"));
 					}
 
-					ME.ShaderProperty(Unlit , new GUIContent("Unlighting"));
 					ME.ShaderProperty(MonochromeLit , new GUIContent("Monochrome Lighting"));
+					ME.ShaderProperty(MinimumLight  , new GUIContent("Minimum Light Limit"));
 
+					EditorGUI.indentLevel ++;
+
+					if (mat.GetInt("_LightingFO") == 1) LightingFoldout = true;
+					LightingFoldout = EditorGUILayout.Foldout(LightingFoldout , "Advanced Settings" , EditorStyles.boldFont);
+					mat.SetInt("_LightingFO" , Convert.ToInt32(LightingFoldout));
+
+					if (LightingFoldout) {
+						ME.ShaderProperty(LightDirMode , new GUIContent("Light Direction Mode"));
+						if (LightDirMode.floatValue == 3.0f) {
+							ME.ShaderProperty(CustomLightRotX , new GUIContent("Custom Light Rotation X"));
+							ME.ShaderProperty(CustomLightRotY , new GUIContent("Custom Light Rotation Y"));
+						}
+						ME.ShaderProperty(Unlit , new GUIContent("Unlighting"));
+					}
+					
+					EditorGUI.indentLevel --;
 				}
 			}
 
@@ -727,16 +741,13 @@ namespace SunaoShader {
 
 						if (mat.GetInt("_OutlineFO") == 1) OutlineFoldout = true;
 						OutlineFoldout = EditorGUILayout.Foldout(OutlineFoldout , "Advanced Settings" , EditorStyles.boldFont);
+						mat.SetInt("_OutlineFO" , Convert.ToInt32(OutlineFoldout));
 
 						if (OutlineFoldout) {
-							mat.SetInt("_OutlineFO" , 1);
-
 							ME.ShaderProperty(OutLineLighting  , new GUIContent("Use Light Color" ));
 							ME.ShaderProperty(OutLineTexColor  , new GUIContent("Use Main Texture"));
 							ME.TexturePropertySingleLine(new GUIContent("Outline Texture") , OutLineTexture);
 							ME.ShaderProperty(OutLineFixScale  , new GUIContent("x10 Scale"       ));
-						} else {
-							mat.SetInt("_OutlineFO" , 0);
 						}
 
 						EditorGUI.indentLevel --;
@@ -791,10 +802,9 @@ namespace SunaoShader {
 
 					if (mat.GetInt("_EmissionFO") == 1) EmissionFoldout = true;
 					EmissionFoldout = EditorGUILayout.Foldout(EmissionFoldout , "Advanced Settings" , EditorStyles.boldFont);
+					mat.SetInt("_EmissionFO" , Convert.ToInt32(EmissionFoldout));
 
 					if (EmissionFoldout) {
-						mat.SetInt("_EmissionFO" , 1);
-
 						ME.TexturePropertySingleLine(new GUIContent("2nd Emission Mask") , EmissionMap2);
 						if (EmissionMap2.textureValue != null) {
 							ME.TextureScaleOffsetProperty(EmissionMap2);
@@ -826,8 +836,6 @@ namespace SunaoShader {
 						}
 
 						ME.ShaderProperty(EmissionInTheDark , new GUIContent("Only in the Dark"));
-					} else {
-						mat.SetInt("_EmissionFO" , 0);
 					}
 
 					EditorGUI.indentLevel --;
@@ -857,10 +865,9 @@ namespace SunaoShader {
 
 					if (mat.GetInt("_ParallaxFO") == 1) ParallaxFoldout = true;
 					ParallaxFoldout = EditorGUILayout.Foldout(ParallaxFoldout , "Advanced Settings" , EditorStyles.boldFont);
+					mat.SetInt("_ParallaxFO" , Convert.ToInt32(ParallaxFoldout));
 
 					if (ParallaxFoldout) {
-						mat.SetInt("_ParallaxFO" , 1);
-
 						ME.TexturePropertySingleLine(new GUIContent("Parallax Depth Mask"       ) , ParallaxDepthMap);
 						if (ParallaxDepthMap.textureValue != null) {
 							ME.TextureScaleOffsetProperty(ParallaxDepthMap);
@@ -898,8 +905,6 @@ namespace SunaoShader {
 						}
 
 						ME.ShaderProperty(ParallaxInTheDark , new GUIContent("Only in the Dark"));
-					} else {
-						mat.SetInt("_ParallaxFO" , 0);
 					}
 
 					EditorGUI.indentLevel --;
@@ -956,10 +961,9 @@ namespace SunaoShader {
 
 					if (mat.GetInt("_ReflectionFO") == 1) ReflectionFoldout = true;
 					ReflectionFoldout = EditorGUILayout.Foldout(ReflectionFoldout , "Advanced Settings" , EditorStyles.boldFont);
+					mat.SetInt("_ReflectionFO" , Convert.ToInt32(ReflectionFoldout));
 
 					if (ReflectionFoldout) {
-						mat.SetInt("_ReflectionFO" , 1);
-
 						ME.ShaderProperty(SpecularTexColor , new GUIContent("Use Main Texture for Specular"));
 						ME.ShaderProperty(MetallicTexColor , new GUIContent("Use Main Texture for Metallic"));
 						ME.ShaderProperty(MatCapTexColor   , new GUIContent("Use Main Texture for MatCap"  ));
@@ -971,9 +975,6 @@ namespace SunaoShader {
 						if (Shader_Transparent) {
 							ME.ShaderProperty(IgnoreTexAlphaR  , new GUIContent("Ignore Main Texture Alpha"));
 						}
-
-					} else {
-						mat.SetInt("_ReflectionFO" , 0);
 					}
 
 					EditorGUI.indentLevel --;
@@ -998,10 +999,9 @@ namespace SunaoShader {
 
 					if (mat.GetInt("_RimLightingFO") == 1) RimLightFoldout = true;
 					RimLightFoldout = EditorGUILayout.Foldout(RimLightFoldout , "Advanced Settings" , EditorStyles.boldFont);
+					mat.SetInt("_RimLightingFO" , Convert.ToInt32(RimLightFoldout));
 
 					if (RimLightFoldout) {
-						mat.SetInt("_RimLightingFO" , 1);
-
 						ME.ShaderProperty(RimLitGradient  , new GUIContent("Rim Light Gradient"));
 						ME.ShaderProperty(RimLitLighting  , new GUIContent("Use Light Color"   ));
 						ME.ShaderProperty(RimLitTexColor  , new GUIContent("Use Main Texture"  ));
@@ -1010,9 +1010,6 @@ namespace SunaoShader {
 						if (Shader_Transparent) {
 							ME.ShaderProperty(IgnoreTexAlphaRL , new GUIContent("Ignore Main Texture Alpha"));
 						}
-
-					} else {
-						mat.SetInt("_RimLightingFO" , 0);
 					}
 
 					EditorGUI.indentLevel --;
@@ -1033,12 +1030,11 @@ namespace SunaoShader {
 					} else {
 						OtherFoldout = EditorGUILayout.Foldout(OtherFoldout , "Show Settings" , EditorStyles.boldFont);
 					}
+					mat.SetInt("_OtherSettingsFO" , Convert.ToInt32(OtherFoldout));
 
 					EditorGUI.indentLevel --;
 
 				if (OtherFoldout) {
-					mat.SetInt("_OtherSettingsFO" , 1);
-
 					using (new EditorGUILayout.VerticalScope("box")) {
 
 						GUILayout.Label("Rendering" , EditorStyles.boldLabel);
@@ -1094,7 +1090,6 @@ namespace SunaoShader {
 						ME.ShaderProperty(SHLight          , new GUIContent("SH Light Intensity"         ));
 						ME.ShaderProperty(PointLight       , new GUIContent("Point/Spot Light Intensity" ));
 						ME.ShaderProperty(LightLimitter    , new GUIContent("Light Intensity Limiter"    ));
-						ME.ShaderProperty(MinimumLight     , new GUIContent("Minimum Light Limit"        ));
 					}
 
 					using (new EditorGUILayout.VerticalScope("box")) {
@@ -1139,8 +1134,6 @@ namespace SunaoShader {
 					
 					}
 
-				} else {
-					mat.SetInt("_OtherSettingsFO" , 0);
 				}
 			}
 

@@ -25,7 +25,7 @@
 	if (_ParallaxEnable) {
 		float  Height      = (1.0f - MonoColor(UNITY_SAMPLE_TEX2D_SAMPLER(_ParallaxDepthMap , _MainTex , IN.pduv).rgb)) * _ParallaxDepth;
 		float2 ParallaxUV  = IN.peuv.xy;
-		       ParallaxUV -= normalize(IN.pview).xz * Height * _ParallaxMap_ST.xy;
+		       ParallaxUV -= IN.pview * Height * _ParallaxMap_ST.xy;
 		       Parallax    = _ParallaxEmission * _ParallaxColor.rgb;
 		       Parallax   *= tex2D(_ParallaxMap  , ParallaxUV).rgb * tex2D(_ParallaxMap  , ParallaxUV).a * IN.peprm.x;
 		       Parallax   *= tex2D(_ParallaxMap2 , IN.peuv.zw).rgb * tex2D(_ParallaxMap2 , IN.peuv.zw).a;

@@ -18,7 +18,7 @@ VOUT vert (VIN v) {
 
 	o.vertex  = v.vertex;
 
-//-------------------------------------視線
+//-------------------------------------視点座標
 
 	#ifdef USING_STEREO_MATRICES
 		o.campos = (unity_StereoWorldSpaceCameraPos[0] + unity_StereoWorldSpaceCameraPos[1]) * 0.5f;
@@ -42,7 +42,7 @@ VOUT vert (VIN v) {
 	}
 
 //-------------------------------------法線
-	o.normal  = v.normal;
+	o.normal  = normalize(v.normal);
 
 //-------------------------------------タンジェント
 	o.tangent = v.tangent;
@@ -84,14 +84,10 @@ VOUT vert (VIN v) {
 		o.decal.w    = sin(0.017453293f * _DecalRotation);
 	}
 
-//-------------------------------------ライト方向
-	o.ldir    = _WorldSpaceLightPos0.xyz;
-
-	#ifdef PASS_FA
-		o.ldir -= o.wpos;
+//-------------------------------------ディレクショナルライト
+	#ifdef PASS_FB
+		o.ldir       = _WorldSpaceLightPos0.xyz;
 	#endif
-
-	o.ldir    = normalize(o.ldir);
 
 //-------------------------------------SHライト
 	#ifdef PASS_FB
@@ -150,11 +146,42 @@ VOUT vert (VIN v) {
 
 //-------------------------------------ポイントライト
 	#ifdef PASS_FA
+		o.ldir    = _WorldSpaceLightPos0.xyz - o.wpos;
 		UNITY_TRANSFER_LIGHTING(o , v.uv1);
 	#endif
 
+//-------------------------------------ライト方向
+	#ifdef PASS_FB
+		if (_LightDirMode == 1) {
+			o.ldir.y   = abs(o.ldir.y );
+			o.shdir.y  = abs(o.shdir.y);
+		}
+		if (_LightDirMode == 2) {
+			o.ldir     = o.campos - mul(unity_ObjectToWorld , float4(0.0f , 0.0f , 0.0f , 1.0f)).xyz;
+			o.shdir    = o.ldir;
+		}
+		if (_LightDirMode == 3) {
+			float2 LD_tX   = float2(cos(0.017453293f *        _CustomLightRotX)  , sin(0.017453293f *        _CustomLightRotX)) ;	//0.017453293 = π/180
+			float2 LD_tY   = float2(cos(0.017453293f * (180 - _CustomLightRotY)) , sin(0.017453293f * (180 - _CustomLightRotY)));
+			float3x3 LD_rX = float3x3( 1.0f    ,  0.0f    , 0.0f     ,
+			                           0.0f    ,  LD_tX.x , -LD_tX.y ,
+			                           0.0f    ,  LD_tX.y ,  LD_tX.x);
+			float3x3 LD_rY = float3x3( LD_tY.x ,  0.0f    ,  LD_tY.y ,
+			                           0.0f    ,  1.0f    ,  0.0f    ,
+			                          -LD_tY.y ,  0.0f    ,  LD_tY.x);
+			o.ldir         = float3(0.0f , 0.0f , 1.0f);
+			o.ldir         = mul(o.ldir , LD_rX);
+			o.ldir         = mul(o.ldir , LD_rY);
+			o.shdir        = o.ldir;
+		}
+
+		o.ldir    = normalize(o.ldir );
+		o.shdir   = normalize(o.shdir);
+
+	#endif
+
 //-------------------------------------Toon
-	o.toon    = Toon(_Toon , _ToonSharpness);
+	o.toon     = Toon(_Toon , _ToonSharpness);
 
 //-------------------------------------エミッションUV
 	o.euv.xy   = MixingTransformTex(v.uv , _MainTex_ST , _EmissionMap_ST );
@@ -186,7 +213,8 @@ VOUT vert (VIN v) {
 	}
 
 //-------------------------------------視差エミッション
-	o.pview   = mul(float3x3(o.tangent.xyz, o.bitan, v.normal) , ObjSpaceViewDir(o.vertex)).xzy;
+	float3 BiNormal = cross(o.normal , normalize(o.tangent.xyz)) * o.tangent.w;
+	o.pview   = normalize(mul(float3x3(o.tangent.xyz , BiNormal , o.normal) , ObjSpaceViewDir(o.vertex)).xyz).xy;
 
 //-------------------------------------視差エミッションUV
 	o.peuv.xy = MixingTransformTex(v.uv , _MainTex_ST , _ParallaxMap_ST     );

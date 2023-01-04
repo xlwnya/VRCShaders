@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-//              Sunao Shader Outline
+//              Sunao Shader Fur
 //                      Copyright (c) 2022 揚茄子研究所
 //--------------------------------------------------------------
 
@@ -49,6 +49,9 @@
 	float     _LightBoost;
 	float     _Unlit;
 	float     _MonochromeLit;
+	uint      _LightDirMode;
+	float     _CustomLightRotX;
+	float     _CustomLightRotY;
 
 //---- Fur
 	bool      _FurEnable;

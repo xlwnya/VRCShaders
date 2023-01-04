@@ -1,5 +1,5 @@
 ﻿//--------------------------------------------------------------
-//              Sunao Shader    Ver 1.6.1
+//              Sunao Shader    Ver 1.6.2
 //
 //                      Copyright (c) 2022 揚茄子研究所
 //                              Twitter : @SUNAO_VRC
@@ -16,7 +16,7 @@ Shader "Sunao Shader/Fur" {
 
 		[HideInInspector] _VersionH        ("Version H"         , int) = 1
 		[HideInInspector] _VersionM        ("Version M"         , int) = 6
-		[HideInInspector] _VersionL        ("Version L"         , int) = 1
+		[HideInInspector] _VersionL        ("Version L"         , int) = 2
 
 		[HideInInspector] _SunaoShaderType ("ShaderType"        , int) = 8
 
@@ -109,6 +109,11 @@ Shader "Sunao Shader/Fur" {
 		_LightBoost        ("Lighting Boost"            , Range( 1.0,  5.0)) = 3.0
 		_Unlit             ("Unlighting"                , Range( 0.0,  1.0)) = 0.0
 		_MonochromeLit     ("Monochrome Lighting"       , Range( 0.0,  1.0)) = 0.0
+
+		[Enum(Normal , 0 , FromAbove , 1 , FromCamera , 2 , Custom , 3)]
+		_LightDirMode      ("Light Direction Mode"      , int) = 0
+		_CustomLightRotX   ("Custom Light Rotation X"  , Range(-180.0, 180.0)) = 90.0
+		_CustomLightRotY   ("Custom Light Rotation Y"  , Range(-180.0, 180.0)) = 0.0
 
 
 		[SToggle]
@@ -302,6 +307,7 @@ Shader "Sunao Shader/Fur" {
 		[HideInInspector] _MainFO          ("Main FO"           , int) = 0
 		[HideInInspector] _DecalFO         ("Decal FO"          , int) = 0
 		[HideInInspector] _ShadingFO       ("Shading FO"        , int) = 0
+		[HideInInspector] _LightingFO      ("Lighting FO"       , int) = 0
 		[HideInInspector] _OutlineFO       ("Outline FO"        , int) = 0
 		[HideInInspector] _EmissionFO      ("Emission FO"       , int) = 0
 		[HideInInspector] _ParallaxFO      ("Parallax FO"       , int) = 0
@@ -327,7 +333,8 @@ Shader "Sunao Shader/Fur" {
 			Tags { "LightMode"  = "ForwardBase" }
 
 			Cull [_Culling]
-			Blend SrcAlpha OneMinusSrcAlpha , Zero One
+			BlendOp Add , Max
+			Blend SrcAlpha OneMinusSrcAlpha , One One
 			ZWrite [_EnableZWrite]
 
 			CGPROGRAM
@@ -352,7 +359,8 @@ Shader "Sunao Shader/Fur" {
 			Tags { "LightMode"  = "ForwardBase" }
 
 			Cull Off
-			Blend SrcAlpha OneMinusSrcAlpha , Zero One
+			BlendOp Add , Max
+			Blend SrcAlpha OneMinusSrcAlpha , One One
 			ZWrite Off
 
 			CGPROGRAM
@@ -378,6 +386,7 @@ Shader "Sunao Shader/Fur" {
 			Tags { "LightMode"  = "ForwardAdd" }
 
 			Cull [_Culling]
+			BlendOp Add , Max
 			Blend One OneMinusSrcAlpha , One One
 			ZWrite Off
 
@@ -403,6 +412,7 @@ Shader "Sunao Shader/Fur" {
 			Tags { "LightMode"  = "ForwardAdd" }
 
 			Cull Off
+			BlendOp Add , Max
 			Blend One OneMinusSrcAlpha , One One
 			ZWrite Off
 

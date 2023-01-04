@@ -1,5 +1,5 @@
 =----------------------------------------------------------------------------=
-                Sunao Shader    Ver 1.6.1
+                Sunao Shader    Ver 1.6.2
 
                         Copyright (c) 2022 揚茄子研究所
                                 Twitter : @SUNAO_VRC

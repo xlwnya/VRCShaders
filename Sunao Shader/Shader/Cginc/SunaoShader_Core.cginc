@@ -75,6 +75,9 @@
 	float     _LightBoost;
 	float     _Unlit;
 	float     _MonochromeLit;
+	uint      _LightDirMode;
+	float     _CustomLightRotX;
+	float     _CustomLightRotY;
 
 //----Outline
 	bool      _OutLineEnable;
@@ -228,7 +231,7 @@ struct VOUT {
 	                float4 peuv    : EMISSION2;
 	                float2 pduv    : EMISSION3;
 	nointerpolation float3 peprm   : EMISSION4;
-	                float3 pview   : EMISSION5;
+	                float2 pview   : EMISSION5;
 
 	#ifdef PASS_FB
 		nointerpolation float3 shdir   : LIGHT1;
