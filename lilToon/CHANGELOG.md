@@ -4,6 +4,128 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.6] - 2022-09-10
+### Fixed
+- Fixed shader property stringification bug
+- Fixed UV for reflection shader
+- Fixed missing localization
+
+## [1.3.5] - 2022-09-06
+### Added
+- LightMode override
+- `Tiling & Offset` and `Blend Mode (Add / Subtract)` for alpha mask
+- `LUT` for shadow color
+- Support for `Forward+` (URP)
+- Added option to reflect light emission in lightbake
+- Lock for `Shader Setting`
+- Bug report generator (`GameObject/lilToon/[Debug] Generate bug report`)
+
+### Fixed
+- Fixed error in VRChat World SDK
+- Fixed `Vertex Light Strength` being ignored
+- Fixed custom shaders not being scanned during optimization
+- Fixed light layers in URP
+- Fixed UV calculation when resolution is changed with `ScalableBufferManager.ResizeBuffers()`
+
+## [1.3.4] - 2022-07-30
+### Added
+- Warning when using variants with GrabPass or geometry shader in project for cluster
+- ChilloutVR avatar build optimization
+
+### Fixed
+- Fixed an issue that could cause script errors
+- Fixed color value after optimization
+- Fixed ForwardAdd lighting
+- Fixed an issue where additional lights would not work after build on URP
+
+## [1.3.3] - 2022-07-27
+### Added
+- `UV Mode` for glitter mask
+
+### Fixed
+- Fixed that the main color 2nd and 3rd dissolve may not work properly after optimization
+- Fixed an issue where shaders might not work well after optimization under some conditions
+- Fixed ambient lighting in URP
+- Fixed an issue with mixed line feed codes on Mac
+- Fixed an error in lilToonMulti
+- Fixed shader rewriting at startup not working properly in OpenGL
+
+## [1.3.2] - 2022-07-20
+### Added
+- `UV Mode` for normal map 2nd
+- `Cull Mode` for main color 2nd / 3rd
+- `Receive Shadow` to outline highlight
+- Extended 2 pass transparent shader
+- Function to make variables constant in VRChat avatar builds
+- Dialog if old package is imported
+
+### Changed
+- Changed the sampler of the normal map 2nd to `Repeat`
+- Changed to move the calculation of point light, spot light and area light to the pixel shader in HDRP and also calculate the light direction
+- Adjusted GUI a little
+- Optimized build time
+- Formatted `lilToonSetting.json`
+- Changed to use ForwardAdd pass in 2 pass transparent shader
+- Unified file names for texture baking
+
+### Fixed
+- Fixed a error in gem shader's GUI
+- Fixed to use RGB channel in matcap 2nd mask
+- Fixed toolchips
+- Fixed the material not being fixed in `Fix Lighting`
+- Fixed dissolve sometimes being removed during shader optimization
+
+## [1.3.1] - 2022-06-28
+### Added
+- Option to not optimize during VRChat avatar test build
+
+### Fixed
+- Fixed a problem that drawing cannot be done correctly when the texture import setting is Clamp in the main color 2nd and 3rd.
+- Fixed an issue where the maximum number of textures was exceeded when using `OpenGLES2`,` OpenGLES3`, and `OpenGLCore` for the API on the editor.
+
+## [1.3.0] - 2022-06-25
+### Added
+- `Receive Shadow` to 2nd / 3rd shadows
+- `Flat` to shadow mask type
+- `Z Bias`, `Highlight`, `Remove 0 width vertices` and `Disable in VR` to outline
+- `Shadow Caster Bias` to rendering settings
+- Fur mesh division type
+- `GSAA` and `Blending Mode` to reflection
+- `LOD` to strength / blur / AO mask of shadows
+- `Main Color Power` to backlight, MatCaps, rim light, emissions
+- `Mask` for shape and `Randomize` for particle size to glitter
+- The function to fill the backface with a single color
+- Metal MatCap and preset
+- Circular tangent map
+- Shape textures for glitter
+- Avoid errors when overwriting with an older version
+- Extension of custom shader function
+- URP and HDRP compatible 2 pass fur shader
+
+### Changed
+- Improved alpha mask GUI
+- Changed the `Fix width by distance` of the outline to be adjustable steplessly
+- Adjusted the initial value of `Light Direction Override`
+- Changed to set shader settings automatically
+- Split `Contrast` into `Density` and `Sensitivity`
+- Changed POM to parameter
+- Expanded preset
+- Changed to save `Setup from FBX` presets in shader settings
+- Changed to preserve `Light Direction Override` property in `Fix lighting`
+- Retune fur preset
+- Improved lighting with Spot Light and Point Light in URP
+
+### Fixed
+- Fixed an issue where fog wasn't working well in URP
+- Fixed baking process when using other than PNG / JPG format for texture
+- Added `[MainTexture]` to the `_MainTex` property
+- Fixed an issue where `Light Direction Override` was affecting ShadeSH9 calculations
+- Fixed an issue where lilToonMulti shader variants were being reduced too much at build
+- Fixed outline mask not working well in lilToonLite
+
+### Removed
+- Support for Unity 2017
+
 ## [1.2.12] - 2022-03-31
 ### Fixed
 - Fixed an issue where custom shaders would give an error in `Unity 2019.4.10f1` and earlier

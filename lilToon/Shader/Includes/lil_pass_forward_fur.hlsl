@@ -78,7 +78,7 @@ struct v2f
         float3 positionWS   : TEXCOORD1;
     #endif
     #if defined(LIL_V2F_NORMAL_WS)
-        float3 normalWS     : TEXCOORD2;
+        LIL_VECTOR_INTERPOLATION float3 normalWS     : TEXCOORD2;
     #endif
     float furLayer      : TEXCOORD3;
     LIL_LIGHTCOLOR_COORDS(4)
@@ -106,6 +106,9 @@ float4 frag(v2f input) : SV_Target
     BEFORE_UNPACK_V2F
     OVERRIDE_UNPACK_V2F
     LIL_GET_HDRPDATA(input,fd);
+    #if defined(LIL_V2F_SHADOW) || defined(LIL_PASS_FORWARDADD)
+        LIL_LIGHT_ATTENUATION(fd.attenuation, input);
+    #endif
     LIL_GET_LIGHTING_DATA(input,fd);
 
     //------------------------------------------------------------------------------------------------------------------------------
@@ -124,6 +127,8 @@ float4 frag(v2f input) : SV_Target
     // UV
     BEFORE_ANIMATE_MAIN_UV
     OVERRIDE_ANIMATE_MAIN_UV
+    BEFORE_CALC_DDX_DDY
+    OVERRIDE_CALC_DDX_DDY
 
     //------------------------------------------------------------------------------------------------------------------------------
     // Main Color
@@ -144,6 +149,7 @@ float4 frag(v2f input) : SV_Target
     #if LIL_RENDER == 1 || defined(LIL_FUR_PRE)
         // Cutout
         fd.col.a = saturate(fd.col.a*5.0-2.0);
+        if(fd.col.a == 0) discard;
     #else
         // Transparent
         clip(fd.col.a - _Cutoff);

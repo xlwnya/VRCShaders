@@ -34,7 +34,7 @@
             float3 positionWS   : TEXCOORD2;
         #endif
         #if defined(LIL_V2F_NORMAL_WS)
-            float3 normalWS     : TEXCOORD3;
+            LIL_VECTOR_INTERPOLATION float3 normalWS     : TEXCOORD3;
         #endif
         LIL_LIGHTCOLOR_COORDS(4)
         LIL_VERTEXLIGHT_FOG_COORDS(5)
@@ -62,7 +62,7 @@
         float4 uv01         : TEXCOORD0;
         float4 uv23         : TEXCOORD1;
         float2 uvMat        : TEXCOORD2;
-        float3 normalWS     : TEXCOORD3;
+        LIL_VECTOR_INTERPOLATION float3 normalWS     : TEXCOORD3;
         float3 positionWS   : TEXCOORD4;
         LIL_LIGHTCOLOR_COORDS(5)
         LIL_LIGHTDIRECTION_COORDS(6)
@@ -91,6 +91,9 @@ float4 frag(v2f input LIL_VFACE(facing)) : SV_Target
     OVERRIDE_UNPACK_V2F
     LIL_COPY_VFACE(fd.facing);
     LIL_GET_HDRPDATA(input,fd);
+    #if defined(LIL_V2F_SHADOW) || defined(LIL_PASS_FORWARDADD)
+        LIL_LIGHT_ATTENUATION(fd.attenuation, input);
+    #endif
     LIL_GET_LIGHTING_DATA(input,fd);
 
     //------------------------------------------------------------------------------------------------------------------------------
@@ -112,6 +115,8 @@ float4 frag(v2f input LIL_VFACE(facing)) : SV_Target
         // UV
         BEFORE_ANIMATE_OUTLINE_UV
         OVERRIDE_ANIMATE_OUTLINE_UV
+        BEFORE_CALC_DDX_DDY
+        OVERRIDE_CALC_DDX_DDY
 
         //------------------------------------------------------------------------------------------------------------------------------
         // Main Color
@@ -122,6 +127,7 @@ float4 frag(v2f input LIL_VFACE(facing)) : SV_Target
         // Alpha
         #if LIL_RENDER == 0
             // Opaque
+            fd.col.a = 1.0;
         #elif LIL_RENDER == 1
             // Cutout
             clip(fd.col.a - _Cutoff);
@@ -150,6 +156,8 @@ float4 frag(v2f input LIL_VFACE(facing)) : SV_Target
         // UV
         BEFORE_ANIMATE_MAIN_UV
         OVERRIDE_ANIMATE_MAIN_UV
+        BEFORE_CALC_DDX_DDY
+        OVERRIDE_CALC_DDX_DDY
 
         //------------------------------------------------------------------------------------------------------------------------------
         // Main Color
@@ -161,6 +169,7 @@ float4 frag(v2f input LIL_VFACE(facing)) : SV_Target
         // Alpha
         #if LIL_RENDER == 0
             // Opaque
+            fd.col.a = 1.0;
         #elif LIL_RENDER == 1
             // Cutout
             clip(fd.col.a - _Cutoff);

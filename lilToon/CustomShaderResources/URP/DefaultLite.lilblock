@@ -1,6 +1,6 @@
     SubShader
     {
-        Tags{*LIL_DOTS_SM_TAGS*}
+        Tags {*LIL_DOTS_SM_TAGS*}
         HLSLINCLUDE
             *LIL_DOTS_SM_4_5*
             #pragma exclude_renderers d3d11_9x
@@ -12,7 +12,6 @@
             #pragma lil_skip_variants_addlightshadows
             #pragma lil_skip_variants_probevolumes
             #pragma lil_skip_variants_ao
-            #pragma lil_skip_variants_lightlists
             #pragma lil_skip_variants_reflections
         ENDHLSL
 
@@ -22,7 +21,7 @@
         Pass
         {
             Name "FORWARD"
-            Tags {"LightMode" = "UniversalForward"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_0*"}
 
             Stencil
             {
@@ -61,6 +60,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -68,7 +68,7 @@
         Pass
         {
             Name "FORWARD_OUTLINE"
-            Tags {"LightMode" = "SRPDefaultUnlit"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_0*"}
 
             Stencil
             {
@@ -108,6 +108,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -116,7 +117,7 @@
         {
             Name "SHADOW_CASTER"
             Tags {"LightMode" = "ShadowCaster"}
-		    Cull [_Cull]
+            Cull [_Cull]
 
             HLSLPROGRAM
 
@@ -135,6 +136,7 @@
 
             #include "Includes/lil_pass_shadowcaster.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -143,7 +145,7 @@
         {
             Name "DEPTHONLY"
             Tags {"LightMode" = "DepthOnly"}
-		    Cull [_Cull]
+            Cull [_Cull]
             ZClip [_ZClip]
             ZWrite [_ZWrite]
             ZTest [_ZTest]
@@ -165,6 +167,7 @@
 
             #include "Includes/lil_pass_depthonly.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -173,7 +176,7 @@
         {
             Name "DEPTHNORMALS"
             Tags {"LightMode" = "DepthNormals"}
-		    Cull [_Cull]
+            Cull [_Cull]
             ZClip [_ZClip]
             ZWrite [_ZWrite]
             ZTest [_ZTest]
@@ -195,6 +198,7 @@
 
             #include "Includes/lil_pass_depthnormals.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -238,6 +242,8 @@
             *LIL_SUBSHADER_INSERT*
 
             #include "Includes/lil_pass_universal2d.hlsl"
+
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -264,8 +270,11 @@
             *LIL_SUBSHADER_INSERT*
 
             #include "Includes/lil_pass_meta.hlsl"
+
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
         *LIL_INSERT_PASS_POST*
     }
+    Fallback "Universal Render Pipeline/Unlit"

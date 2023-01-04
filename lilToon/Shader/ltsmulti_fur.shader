@@ -1,20 +1,17 @@
 Shader "Hidden/lilToonMultiFur"
 {
-    // Memo
-    // If you are using Unity 2018 or earlier, you need to replace `shader_feature_local` with` shader_feature`.
-    // If there are too many variants, you should also replace them with #define.
-
     Properties
     {
         //----------------------------------------------------------------------------------------------------------------------
         // Base
         [lilToggle]     _Invisible                  ("Invisible", Int) = 0
                         _AsUnlit                    ("As Unlit", Range(0, 1)) = 0
-                        _Cutoff                     ("Alpha Cutoff", Range(-0.001,1.001)) = 0.001
+                        _Cutoff                     ("Alpha Cutoff", Range(-0.001,1.001)) = 0.5
                         _SubpassCutoff              ("Subpass Alpha Cutoff", Range(0,1)) = 0.5
         [lilToggle]     _FlipNormal                 ("Flip Backface Normal", Int) = 0
         [lilToggle]     _ShiftBackfaceUV            ("Shift Backface UV", Int) = 0
                         _BackfaceForceShadow        ("Backface Force Shadow", Range(0,1)) = 0
+        [lilHDR]        _BackfaceColor              ("Color", Color) = (0,0,0,0)
                         _VertexLightStrength        ("Vertex Light Strength", Range(0,1)) = 0
                         _LightMinLimit              ("Light Min Limit", Range(0,1)) = 0.05
                         _LightMaxLimit              ("Light Max Limit", Range(0,10)) = 1
@@ -22,12 +19,12 @@ Shader "Hidden/lilToonMultiFur"
                         _MonochromeLighting         ("Monochrome lighting", Range(0,1)) = 0
                         _AlphaBoostFA               ("Alpha Boost", Range(1,100)) = 10
                         _lilDirectionalLightStrength ("Directional Light Strength", Range(0,1)) = 1
-        [lilVec3B]      _LightDirectionOverride     ("Light Direction Override", Vector) = (0,0.001,0,0)
+        [lilVec3B]      _LightDirectionOverride     ("Light Direction Override", Vector) = (0.001,0.002,0.001,0)
 
         //----------------------------------------------------------------------------------------------------------------------
         // Main
-        [lilHDR]        _Color                      ("Color", Color) = (1,1,1,1)
-                        _MainTex                    ("Texture", 2D) = "white" {}
+        [lilHDR] [MainColor] _Color                 ("Color", Color) = (1,1,1,1)
+        [MainTexture]   _MainTex                    ("Texture", 2D) = "white" {}
         [lilUVAnim]     _MainTex_ScrollRotate       ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
         [lilHSVG]       _MainTexHSVG                ("Hue|Saturation|Value|Gamma", Vector) = (0,1,1,1)
                         _MainGradationStrength      ("Gradation Strength", Range(0, 1)) = 0
@@ -40,6 +37,7 @@ Shader "Hidden/lilToonMultiFur"
         [lilHDR]        _Color2nd                   ("Color", Color) = (1,1,1,1)
                         _Main2ndTex                 ("Texture", 2D) = "white" {}
         [lilEnum]       _Main2ndTex_UVMode          ("UV Mode|UV0|UV1|UV2|UV3|MatCap", Int) = 0
+        [lilEnum]       _Main2ndTex_Cull            ("Cull Mode|Off|Front|Back", Int) = 0
         [lilAngle]      _Main2ndTexAngle            ("Angle", Float) = 0
         [lilDecalAnim]  _Main2ndTexDecalAnimation   ("Animation|X Size|Y Size|Frames|FPS", Vector) = (1,1,1,30)
         [lilDecalSub]   _Main2ndTexDecalSubParam    ("Ratio X|Ratio Y|Fix Border", Vector) = (1,1,0,1)
@@ -69,6 +67,7 @@ Shader "Hidden/lilToonMultiFur"
                         _Main3rdTex                 ("Texture", 2D) = "white" {}
         [lilAngle]      _Main3rdTexAngle            ("Angle", Float) = 0
         [lilEnum]       _Main3rdTex_UVMode          ("UV Mode|UV0|UV1|UV2|UV3|MatCap", Int) = 0
+        [lilEnum]       _Main3rdTex_Cull            ("Cull Mode|Off|Front|Back", Int) = 0
         [lilDecalAnim]  _Main3rdTexDecalAnimation   ("Animation|X Size|Y Size|Frames|FPS", Vector) = (1,1,1,30)
         [lilDecalSub]   _Main3rdTexDecalSubParam    ("Ratio X|Ratio Y|Fix Border", Vector) = (1,1,0,1)
         [lilToggle]     _Main3rdTexIsDecal          ("As Decal", Int) = 0
@@ -93,7 +92,7 @@ Shader "Hidden/lilToonMultiFur"
         //----------------------------------------------------------------------------------------------------------------------
         // Alpha Mask
         [lilEnumLabel]  _AlphaMaskMode              ("AlphaMask|", Int) = 0
-        [NoScaleOffset] _AlphaMask                  ("AlphaMask", 2D) = "white" {}
+                        _AlphaMask                  ("AlphaMask", 2D) = "white" {}
                         _AlphaMaskScale             ("Scale", Float) = 1
                         _AlphaMaskValue             ("Offset", Float) = 0
 
@@ -107,6 +106,7 @@ Shader "Hidden/lilToonMultiFur"
         // NormalMap 2nd
         [lilToggleLeft] _UseBump2ndMap              ("Use Normal Map 2nd", Int) = 0
         [Normal]        _Bump2ndMap                 ("Normal Map", 2D) = "bump" {}
+        [lilEnum]       _Bump2ndMap_UVMode          ("UV Mode|UV0|UV1|UV2|UV3", Int) = 0
                         _Bump2ndScale               ("Scale", Range(-10,10)) = 1
         [NoScaleOffset] _Bump2ndScaleMask           ("Mask", 2D) = "white" {}
 
@@ -136,6 +136,7 @@ Shader "Hidden/lilToonMultiFur"
         [lilToggleLeft] _UseBacklight               ("Use Backlight", Int) = 0
         [lilHDR]        _BacklightColor             ("Color", Color) = (0.85,0.8,0.7,1.0)
         [NoScaleOffset] _BacklightColorTex          ("Texture", 2D) = "white" {}
+                        _BacklightMainStrength      ("Blend Main", Range(0, 1)) = 0
                         _BacklightNormalStrength    ("Normal Strength", Range(0, 1)) = 1.0
                         _BacklightBorder            ("Border", Range(0, 1)) = 0.35
                         _BacklightBlur              ("Blur", Range(0, 1)) = 0.05
@@ -147,33 +148,42 @@ Shader "Hidden/lilToonMultiFur"
         //----------------------------------------------------------------------------------------------------------------------
         // Shadow
         [lilToggleLeft] _UseShadow                  ("Use Shadow", Int) = 0
-        [lilToggle]     _ShadowReceive              ("Receive Shadow", Int) = 0
                         _ShadowStrength             ("Strength", Range(0, 1)) = 1
         [NoScaleOffset] _ShadowStrengthMask         ("Strength", 2D) = "white" {}
+        [lilLOD]        _ShadowStrengthMaskLOD      ("LOD", Range(0, 1)) = 0
         [NoScaleOffset] _ShadowBorderMask           ("Border", 2D) = "white" {}
+        [lilLOD]        _ShadowBorderMaskLOD        ("LOD", Range(0, 1)) = 0
         [NoScaleOffset] _ShadowBlurMask             ("Blur", 2D) = "white" {}
+        [lilLOD]        _ShadowBlurMaskLOD          ("LOD", Range(0, 1)) = 0
         [lilFFFF]       _ShadowAOShift              ("1st Scale|1st Offset|2nd Scale|2nd Offset", Vector) = (1,0,1,0)
         [lilFF]         _ShadowAOShift2             ("3rd Scale|3rd Offset", Vector) = (1,0,1,0)
         [lilToggle]     _ShadowPostAO               ("Post AO", Int) = 0
-                        _ShadowColor                ("Shadow Color", Color) = (0.7,0.75,0.85,1.0)
+        [lilEnum]       _ShadowColorType            ("Color Type|Normal|LUT", Int) = 0
+                        _ShadowColor                ("Shadow Color", Color) = (0.82,0.76,0.85,1.0)
         [NoScaleOffset] _ShadowColorTex             ("Shadow Color", 2D) = "black" {}
                         _ShadowNormalStrength       ("Normal Strength", Range(0, 1)) = 1.0
                         _ShadowBorder               ("Border", Range(0, 1)) = 0.5
                         _ShadowBlur                 ("Blur", Range(0, 1)) = 0.1
-                        _Shadow2ndColor             ("2nd Color", Color) = (0,0,0,0)
+                        _ShadowReceive              ("Receive Shadow", Range(0, 1)) = 0
+                        _Shadow2ndColor             ("2nd Color", Color) = (0.68,0.66,0.79,1)
         [NoScaleOffset] _Shadow2ndColorTex          ("2nd Color", 2D) = "black" {}
                         _Shadow2ndNormalStrength    ("2nd Normal Strength", Range(0, 1)) = 1.0
-                        _Shadow2ndBorder            ("2nd Border", Range(0, 1)) = 0.5
-                        _Shadow2ndBlur              ("2nd Blur", Range(0, 1)) = 0.3
+                        _Shadow2ndBorder            ("2nd Border", Range(0, 1)) = 0.15
+                        _Shadow2ndBlur              ("2nd Blur", Range(0, 1)) = 0.1
+                        _Shadow2ndReceive           ("Receive Shadow", Range(0, 1)) = 0
                         _Shadow3rdColor             ("3rd Color", Color) = (0,0,0,0)
         [NoScaleOffset] _Shadow3rdColorTex          ("3rd Color", 2D) = "black" {}
                         _Shadow3rdNormalStrength    ("3rd Normal Strength", Range(0, 1)) = 1.0
                         _Shadow3rdBorder            ("3rd Border", Range(0, 1)) = 0.25
                         _Shadow3rdBlur              ("3rd Blur", Range(0, 1)) = 0.1
-                        _ShadowBorderColor          ("Border Color", Color) = (1,0,0,1)
-                        _ShadowBorderRange          ("Border Range", Range(0, 1)) = 0
-                        _ShadowMainStrength         ("Contrast", Range(0, 1)) = 1
+                        _Shadow3rdReceive           ("Receive Shadow", Range(0, 1)) = 0
+                        _ShadowBorderColor          ("Border Color", Color) = (1,0.1,0,1)
+                        _ShadowBorderRange          ("Border Range", Range(0, 1)) = 0.08
+                        _ShadowMainStrength         ("Contrast", Range(0, 1)) = 0
                         _ShadowEnvStrength          ("Environment Strength", Range(0, 1)) = 0
+        [lilEnum]       _ShadowMaskType             ("Mask Type|Strength|Flat", Int) = 0
+                        _ShadowFlatBorder           ("Border", Range(-2, 2)) = 1
+                        _ShadowFlatBlur             ("Blur", Range(0.001, 2)) = 1
 
         //----------------------------------------------------------------------------------------------------------------------
         // Reflection
@@ -187,6 +197,7 @@ Shader "Hidden/lilToonMultiFur"
         // Reflectance
         [Gamma]         _Reflectance                ("Reflectance", Range(0, 1)) = 0.04
         // Reflection
+                        _GSAAStrength               ("GSAA", Range(0, 1)) = 0
         [lilToggle]     _ApplySpecular              ("Apply Specular", Int) = 1
         [lilToggle]     _ApplySpecularFA            ("Apply Specular in ForwardAdd", Int) = 1
         [lilToggle]     _SpecularToon               ("Specular Toon", Int) = 1
@@ -202,12 +213,14 @@ Shader "Hidden/lilToonMultiFur"
         [lilHDR]        _ReflectionCubeColor        ("Color", Color) = (0,0,0,1)
         [lilToggle]     _ReflectionCubeOverride     ("Override", Int) = 0
                         _ReflectionCubeEnableLighting ("Enable Lighting", Range(0, 1)) = 1
+        [lilEnum]       _ReflectionBlendMode        ("Blend Mode|Normal|Add|Screen|Multiply", Int) = 1
 
         //----------------------------------------------------------------------------------------------------------------------
         // MatCap
         [lilToggleLeft] _UseMatCap                  ("Use MatCap", Int) = 0
         [lilHDR]        _MatCapColor                ("Color", Color) = (1,1,1,1)
                         _MatCapTex                  ("Texture", 2D) = "white" {}
+                        _MatCapMainStrength         ("Blend Main", Range(0, 1)) = 0
         [lilVec2R]      _MatCapBlendUV1             ("Blend UV1", Vector) = (0,0,0,0)
         [lilToggle]     _MatCapZRotCancel           ("Z-axis rotation cancellation", Int) = 1
         [lilToggle]     _MatCapPerspective          ("Fix Perspective", Int) = 1
@@ -230,6 +243,7 @@ Shader "Hidden/lilToonMultiFur"
         [lilToggleLeft] _UseMatCap2nd               ("Use MatCap 2nd", Int) = 0
         [lilHDR]        _MatCap2ndColor             ("Color", Color) = (1,1,1,1)
                         _MatCap2ndTex               ("Texture", 2D) = "white" {}
+                        _MatCap2ndMainStrength      ("Blend Main", Range(0, 1)) = 0
         [lilVec2R]      _MatCap2ndBlendUV1          ("Blend UV1", Vector) = (0,0,0,0)
         [lilToggle]     _MatCap2ndZRotCancel        ("Z-axis rotation cancellation", Int) = 1
         [lilToggle]     _MatCap2ndPerspective       ("Fix Perspective", Int) = 1
@@ -250,15 +264,16 @@ Shader "Hidden/lilToonMultiFur"
         //----------------------------------------------------------------------------------------------------------------------
         // Rim
         [lilToggleLeft] _UseRim                     ("Use Rim", Int) = 0
-        [lilHDR]        _RimColor                   ("Color", Color) = (1,1,1,1)
+        [lilHDR]        _RimColor                   ("Color", Color) = (0.66,0.5,0.48,1)
         [NoScaleOffset] _RimColorTex                ("Texture", 2D) = "white" {}
+                        _RimMainStrength            ("Blend Main", Range(0, 1)) = 0
                         _RimNormalStrength          ("Normal Strength", Range(0, 1)) = 1.0
                         _RimBorder                  ("Border", Range(0, 1)) = 0.5
-                        _RimBlur                    ("Blur", Range(0, 1)) = 0.1
-        [PowerSlider(3.0)]_RimFresnelPower          ("Fresnel Power", Range(0.01, 50)) = 3.0
+                        _RimBlur                    ("Blur", Range(0, 1)) = 0.65
+        [PowerSlider(3.0)]_RimFresnelPower          ("Fresnel Power", Range(0.01, 50)) = 3.5
                         _RimEnableLighting          ("Enable Lighting", Range(0, 1)) = 1
-                        _RimShadowMask              ("Shadow Mask", Range(0, 1)) = 0
-        [lilToggle]     _RimBackfaceMask            ("Backface Mask", Int) = 0
+                        _RimShadowMask              ("Shadow Mask", Range(0, 1)) = 0.5
+        [lilToggle]     _RimBackfaceMask            ("Backface Mask", Int) = 1
                         _RimVRParallaxStrength      ("VR Parallax Strength", Range(0, 1)) = 1
         [lilToggle]     _RimApplyTransparency       ("Apply Transparency", Int) = 1
                         _RimDirStrength             ("Light direction strength", Range(0, 1)) = 0
@@ -274,16 +289,23 @@ Shader "Hidden/lilToonMultiFur"
         [lilEnum]       _GlitterUVMode              ("UV Mode|UV0|UV1", Int) = 0
         [lilHDR]        _GlitterColor               ("Color", Color) = (1,1,1,1)
                         _GlitterColorTex            ("Texture", 2D) = "white" {}
+        [lilEnum]       _GlitterColorTex_UVMode     ("UV Mode|UV0|UV1|UV2|UV3", Int) = 0
                         _GlitterMainStrength        ("Main Color Strength", Range(0, 1)) = 0
                         _GlitterNormalStrength      ("Normal Strength", Range(0, 1)) = 1.0
+                        _GlitterScaleRandomize      ("Scale Randomize", Range(0, 1)) = 0
+        [lilToggle]     _GlitterApplyShape          ("Apply Shape", Int) = 0
+                        _GlitterShapeTex            ("Texture", 2D) = "white" {}
+        [lilVec2]       _GlitterAtras               ("Atras", Vector) = (1,1,0,0)
+        [lilToggle]     _GlitterAngleRandomize      ("Angle Randomize", Int) = 0
         [lilGlitParam1] _GlitterParams1             ("Tiling|Particle Size|Contrast", Vector) = (256,256,0.16,50)
         [lilGlitParam2] _GlitterParams2             ("Blink Speed|Angle|Blend Light Direction|Color Randomness", Vector) = (0.25,0,0,0)
                         _GlitterPostContrast        ("Post Contrast", Float) = 1
+                        _GlitterSensitivity         ("Sensitivity", Float) = 0.25
                         _GlitterEnableLighting      ("Enable Lighting", Range(0, 1)) = 1
                         _GlitterShadowMask          ("Shadow Mask", Range(0, 1)) = 0
         [lilToggle]     _GlitterBackfaceMask        ("Backface Mask", Int) = 0
         [lilToggle]     _GlitterApplyTransparency   ("Apply Transparency", Int) = 1
-                        _GlitterVRParallaxStrength  ("VR Parallax Strength", Range(0, 1)) = 1
+                        _GlitterVRParallaxStrength  ("VR Parallax Strength", Range(0, 1)) = 0
 
         //----------------------------------------------------------------------------------------------------------------------
         // Emmision
@@ -292,6 +314,7 @@ Shader "Hidden/lilToonMultiFur"
                         _EmissionMap                ("Texture", 2D) = "white" {}
         [lilUVAnim]     _EmissionMap_ScrollRotate   ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
         [lilEnum]       _EmissionMap_UVMode         ("UV Mode|UV0|UV1|UV2|UV3|Rim", Int) = 0
+                        _EmissionMainStrength       ("Main Color Strength", Range(0, 1)) = 0
                         _EmissionBlend              ("Blend", Range(0,1)) = 1
                         _EmissionBlendMask          ("Mask", 2D) = "white" {}
         [lilUVAnim]     _EmissionBlendMask_ScrollRotate ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
@@ -328,6 +351,7 @@ Shader "Hidden/lilToonMultiFur"
                         _Emission2ndMap             ("Texture", 2D) = "white" {}
         [lilUVAnim]     _Emission2ndMap_ScrollRotate ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
         [lilEnum]       _Emission2ndMap_UVMode      ("UV Mode|UV0|UV1|UV2|UV3|Rim", Int) = 0
+                        _Emission2ndMainStrength    ("Main Color Strength", Range(0, 1)) = 0
                         _Emission2ndBlend           ("Blend", Range(0,1)) = 1
                         _Emission2ndBlendMask       ("Mask", 2D) = "white" {}
         [lilUVAnim]     _Emission2ndBlendMask_ScrollRotate ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
@@ -360,6 +384,7 @@ Shader "Hidden/lilToonMultiFur"
         //----------------------------------------------------------------------------------------------------------------------
         // Parallax
         [lilToggleLeft] _UseParallax                ("Use Parallax", Int) = 0
+        [lilToggle]     _UsePOM                     ("Use POM", Int) = 0
         [NoScaleOffset] _ParallaxMap                ("Parallax Map", 2D) = "gray" {}
                         _Parallax                   ("Parallax Scale", float) = 0.02
                         _ParallaxOffset             ("Parallax Offset", float) = 0.5
@@ -408,6 +433,50 @@ Shader "Hidden/lilToonMultiFur"
                         _Keys                       ("Keys", Vector) = (0,0,0,0)
 
         //----------------------------------------------------------------------------------------------------------------------
+        // Outline
+        [lilHDR]        _OutlineColor               ("Outline Color", Color) = (0.6,0.56,0.73,1)
+                        _OutlineTex                 ("Texture", 2D) = "white" {}
+        [lilUVAnim]     _OutlineTex_ScrollRotate    ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
+        [lilHSVG]       _OutlineTexHSVG             ("Hue|Saturation|Value|Gamma", Vector) = (0,1,1,1)
+        [lilHDR]        _OutlineLitColor            ("Lit Color", Color) = (1.0,0.2,0,0)
+        [lilToggle]     _OutlineLitApplyTex         ("Apply Tex", Int) = 0
+                        _OutlineLitScale            ("Scale", Float) = 10
+                        _OutlineLitOffset           ("Offset", Float) = -8
+        [lilToggle]     _OutlineLitShadowReceive    ("Receive Shadow", Int) = 0
+        [lilOLWidth]    _OutlineWidth               ("Width", Range(0,1)) = 0.08
+        [NoScaleOffset] _OutlineWidthMask           ("Width", 2D) = "white" {}
+                        _OutlineFixWidth            ("Fix Width", Range(0,1)) = 0.5
+        [lilEnum]       _OutlineVertexR2Width       ("Vertex Color|None|R|RGBA", Int) = 0
+        [lilToggle]     _OutlineDeleteMesh          ("Delete Mesh", Int) = 0
+        [NoScaleOffset][Normal] _OutlineVectorTex   ("Vector", 2D) = "bump" {}
+        [lilEnum]       _OutlineVectorUVMode        ("UV Mode|UV0|UV1|UV2|UV3", Int) = 0
+                        _OutlineVectorScale         ("Vector scale", Range(-10,10)) = 1
+                        _OutlineEnableLighting      ("Enable Lighting", Range(0, 1)) = 1
+                        _OutlineZBias               ("Z Bias", Float) = 0
+        [lilToggle]     _OutlineDisableInVR         ("Disable in VR", Int) = 0
+
+        //----------------------------------------------------------------------------------------------------------------------
+        // Tessellation
+                        _TessEdge                   ("Tessellation Edge", Range(1, 100)) = 10
+                        _TessStrength               ("Tessellation Strength", Range(0, 1)) = 0.5
+                        _TessShrink                 ("Tessellation Shrink", Range(0, 1)) = 0.0
+        [IntRange]      _TessFactorMax              ("Tessellation Max", Range(1, 8)) = 3
+
+        //----------------------------------------------------------------------------------------------------------------------
+        // For Multi
+        [lilToggleLeft] _UseOutline                 ("Use Outline", Int) = 0
+        [lilEnum]       _TransparentMode            ("Rendering Mode|Opaque|Cutout|Transparent|Refraction|Fur|FurCutout|Gem", Int) = 0
+        [lilToggle]     _UseClippingCanceller       ("Use Clipping Canceller", Int) = 0
+        [lilToggle]     _AsOverlay                  ("As Overlay", Int) = 0
+
+        //----------------------------------------------------------------------------------------------------------------------
+        // Save (Unused)
+        [HideInInspector]                               _BaseColor          ("Color", Color) = (1,1,1,1)
+        [HideInInspector]                               _BaseMap            ("Texture", 2D) = "white" {}
+        [HideInInspector]                               _BaseColorMap       ("Texture", 2D) = "white" {}
+        [HideInInspector]                               _lilToonVersion     ("Version", Int) = 32
+
+        //----------------------------------------------------------------------------------------------------------------------
         // Advanced
         [lilEnum]                                       _Cull               ("Cull Mode|Off|Front|Back", Int) = 2
         [Enum(UnityEngine.Rendering.BlendMode)]         _SrcBlend           ("SrcBlend", Int) = 1
@@ -436,27 +505,29 @@ Shader "Hidden/lilToonMultiFur"
                                                         _OffsetUnits        ("Offset Units", Float) = 0
         [lilColorMask]                                  _ColorMask          ("Color Mask", Int) = 15
         [lilToggle]                                     _AlphaToMask        ("AlphaToMask", Int) = 0
+                                                        _lilShadowCasterBias ("Shadow Caster Bias", Float) = 0
 
         //----------------------------------------------------------------------------------------------------------------------
         // Fur
-                        _FurNoiseMask               ("Fur Noise", 2D) = "white" {}
-        [NoScaleOffset] _FurMask                    ("Fur Mask", 2D) = "white" {}
-        [NoScaleOffset] _FurLengthMask              ("Fur Length Mask", 2D) = "white" {}
-        [NoScaleOffset][Normal] _FurVectorTex       ("Fur Vector", 2D) = "bump" {}
-                        _FurVectorScale             ("Fur Vector scale", Range(-10,10)) = 1
-        [lilVec3Float]  _FurVector                  ("Fur Vector|Fur Length", Vector) = (0.0,0.0,1.0,0.2)
+                        _FurNoiseMask               ("Noise", 2D) = "white" {}
+        [NoScaleOffset] _FurMask                    ("Mask", 2D) = "white" {}
+        [NoScaleOffset] _FurLengthMask              ("Length Mask", 2D) = "white" {}
+        [NoScaleOffset][Normal] _FurVectorTex       ("Vector", 2D) = "bump" {}
+                        _FurVectorScale             ("Vector scale", Range(-10,10)) = 1
+        [lilVec3Float]  _FurVector                  ("Vector|Length", Vector) = (0.0,0.0,1.0,0.02)
         [lilToggle]     _VertexColor2FurVector      ("VertexColor->Vector", Int) = 0
-                        _FurGravity                 ("Fur Gravity", Range(0,1)) = 0.25
-                        _FurRandomize               ("Fur Randomize", Float) = 0
-                        _FurAO                      ("Fur AO", Range(0,1)) = 0
-        [IntRange]      _FurLayerNum                ("Fur Layer Num", Range(1, 6)) = 2
-                        _FurRootOffset              ("Fur Root Offset", Range(-1,0)) = 0
-                        _FurCutoutLength            ("Fur Cutout Length", Float) = 0.8
-                        _FurTouchStrength           ("Fur Touch Strength", Range(0, 1)) = 0
+                        _FurGravity                 ("Gravity", Range(0,1)) = 0.25
+                        _FurRandomize               ("Randomize", Float) = 0
+                        _FurAO                      ("AO", Range(0,1)) = 0
+        [lilEnum]       _FurMeshType                ("Mesh Type|Subdivision|Shrink", Int) = 1
+        [IntRange]      _FurLayerNum                ("Layer Num", Range(1, 6)) = 2
+                        _FurRootOffset              ("Root Offset", Range(-1,0)) = 0
+                        _FurCutoutLength            ("Cutout Length", Float) = 0.8
+                        _FurTouchStrength           ("Touch Strength", Range(0, 1)) = 0
 
         //----------------------------------------------------------------------------------------------------------------------
         // Fur Advanced
-        [lilCullMode]                                   _FurCull                ("Cull Mode|Off|Front|Back", Int) = 0
+        [lilEnum]                                       _FurCull                ("Cull Mode|Off|Front|Back", Int) = 0
         [Enum(UnityEngine.Rendering.BlendMode)]         _FurSrcBlend            ("SrcBlend", Int) = 5
         [Enum(UnityEngine.Rendering.BlendMode)]         _FurDstBlend            ("DstBlend", Int) = 10
         [Enum(UnityEngine.Rendering.BlendMode)]         _FurSrcBlendAlpha       ("SrcBlendAlpha", Int) = 1
@@ -483,54 +554,44 @@ Shader "Hidden/lilToonMultiFur"
                                                         _FurOffsetUnits         ("Offset Units", Float) = 0
         [lilColorMask]                                  _FurColorMask           ("Color Mask", Int) = 15
         [lilToggle]                                     _FurAlphaToMask         ("AlphaToMask", Int) = 0
-
-        //----------------------------------------------------------------------------------------------------------------------
-        // For Multi
-        [lilToggleLeft] _UseOutline                 ("Use Outline", Int) = 0
-        [lilEnum]       _TransparentMode            ("Rendering Mode|Opaque|Cutout|Transparent|Refraction|Fur|FurCutout|Gem", Int) = 0
-        [lilToggle]     _UsePOM                     ("Use POM", Int) = 0
-        [lilToggle]     _UseClippingCanceller       ("Use Clipping Canceller", Int) = 0
-        [lilToggle]     _AsOverlay                  ("As Overlay", Int) = 0
-
-        //----------------------------------------------------------------------------------------------------------------------
-        // Save (Unused)
-        [HideInInspector] [MainColor]                   _BaseColor          ("Color", Color) = (1,1,1,1)
-        [HideInInspector] [MainTexture]                 _BaseMap            ("Texture", 2D) = "white" {}
-        [HideInInspector]                               _BaseColorMap       ("Texture", 2D) = "white" {}
-        [HideInInspector]                               _lilToonVersion     ("Version", Int) = 0
     }
-    HLSLINCLUDE
-        #pragma require geometry
-        #define LIL_FUR
-        #define LIL_MULTI
-        #define LIL_MULTI_INPUTS_MAIN_TONECORRECTION
-        #define LIL_MULTI_INPUTS_MAIN2ND
-        #define LIL_MULTI_INPUTS_MAIN3RD
-        #define LIL_MULTI_INPUTS_ALPHAMASK
-        #define LIL_MULTI_INPUTS_SHADOW
-        #define LIL_MULTI_INPUTS_BACKLIGHT
-        #define LIL_MULTI_INPUTS_EMISSION
-        #define LIL_MULTI_INPUTS_EMISSION_2ND
-        #define LIL_MULTI_INPUTS_NORMAL
-        #define LIL_MULTI_INPUTS_NORMAL_2ND
-        #define LIL_MULTI_INPUTS_ANISOTROPY
-        #define LIL_MULTI_INPUTS_REFLECTION
-        #define LIL_MULTI_INPUTS_MATCAP
-        #define LIL_MULTI_INPUTS_MATCAP_2ND
-        #define LIL_MULTI_INPUTS_RIM
-        #define LIL_MULTI_INPUTS_GLITTER
-        #define LIL_MULTI_INPUTS_PARALLAX
-        #define LIL_MULTI_INPUTS_DISTANCE_FADE
-        #define LIL_MULTI_INPUTS_AUDIOLINK
-        #define LIL_MULTI_INPUTS_DISSOLVE
-    ENDHLSL
 
-//----------------------------------------------------------------------------------------------------------------------
-// BRP Start
-//
     SubShader
     {
         Tags {"RenderType" = "Transparent" "Queue" = "Transparent"}
+        HLSLINCLUDE
+            #pragma require geometry
+            #pragma fragmentoption ARB_precision_hint_fastest
+            #define LIL_FUR
+            #define LIL_MULTI
+            #define LIL_MULTI_INPUTS_MAIN_TONECORRECTION
+            #define LIL_MULTI_INPUTS_MAIN2ND
+            #define LIL_MULTI_INPUTS_MAIN3RD
+            #define LIL_MULTI_INPUTS_ALPHAMASK
+            #define LIL_MULTI_INPUTS_SHADOW
+            #define LIL_MULTI_INPUTS_BACKLIGHT
+            #define LIL_MULTI_INPUTS_EMISSION
+            #define LIL_MULTI_INPUTS_EMISSION_2ND
+            #define LIL_MULTI_INPUTS_NORMAL
+            #define LIL_MULTI_INPUTS_NORMAL_2ND
+            #define LIL_MULTI_INPUTS_ANISOTROPY
+            #define LIL_MULTI_INPUTS_REFLECTION
+            #define LIL_MULTI_INPUTS_MATCAP
+            #define LIL_MULTI_INPUTS_MATCAP_2ND
+            #define LIL_MULTI_INPUTS_RIM
+            #define LIL_MULTI_INPUTS_GLITTER
+            #define LIL_MULTI_INPUTS_PARALLAX
+            #define LIL_MULTI_INPUTS_DISTANCE_FADE
+            #define LIL_MULTI_INPUTS_AUDIOLINK
+            #define LIL_MULTI_INPUTS_DISSOLVE
+
+            #pragma skip_variants SHADOWS_SCREEN _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN _ADDITIONAL_LIGHT_SHADOWS SCREEN_SPACE_SHADOWS_ON SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
+            #pragma skip_variants DECALS_OFF DECALS_3RT DECALS_4RT DECAL_SURFACE_GRADIENT _DBUFFER_MRT1 _DBUFFER_MRT2 _DBUFFER_MRT3
+            #pragma skip_variants _ADDITIONAL_LIGHT_SHADOWS
+            #pragma skip_variants PROBE_VOLUMES_OFF PROBE_VOLUMES_L1 PROBE_VOLUMES_L2
+            #pragma skip_variants _SCREEN_SPACE_OCCLUSION
+        ENDHLSL
+
 
         // Forward
         Pass
@@ -567,14 +628,7 @@ Shader "Hidden/lilToonMultiFur"
             #pragma multi_compile_fwdbase
             #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
             #pragma multi_compile_instancing
-            #pragma fragmentoption ARB_precision_hint_fastest
-            #pragma skip_variants DIRLIGHTMAP_COMBINED
-
-            // Skip vertex light
-            //#pragma skip_variants VERTEXLIGHT_ON
-
-            // Skip lightmap
-            #pragma skip_variants LIGHTMAP_ON DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING SHADOWS_SHADOWMASK
+            #define LIL_PASS_FORWARD
 
             // Transparent mode
             #pragma shader_feature_local UNITY_UI_ALPHACLIP
@@ -617,6 +671,9 @@ Shader "Hidden/lilToonMultiFur"
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
             #include "Includes/lil_pipeline_brp.hlsl"
+            #include "Includes/lil_common.hlsl"
+            // Insert functions and includes that depend on Unity here
+
             #include "Includes/lil_pass_forward.hlsl"
 
             ENDHLSL
@@ -658,14 +715,7 @@ Shader "Hidden/lilToonMultiFur"
             #pragma multi_compile_fwdbase
             #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
             #pragma multi_compile_instancing
-            #pragma fragmentoption ARB_precision_hint_fastest
-            #pragma skip_variants SHADOWS_SCREEN
-
-            // Skip vertex light
-            //#pragma skip_variants VERTEXLIGHT_ON
-
-            // Skip lightmap
-            #pragma skip_variants LIGHTMAP_ON DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING SHADOWS_SHADOWMASK
+            #define LIL_PASS_FORWARD
 
             // Transparent mode
             #pragma shader_feature_local UNITY_UI_CLIP_RECT
@@ -680,6 +730,9 @@ Shader "Hidden/lilToonMultiFur"
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
             #include "Includes/lil_pipeline_brp.hlsl"
+            #include "Includes/lil_common.hlsl"
+            // Insert functions and includes that depend on Unity here
+
             #include "Includes/lil_pass_forward_fur.hlsl"
 
             ENDHLSL
@@ -705,9 +758,9 @@ Shader "Hidden/lilToonMultiFur"
                 Fail [_StencilFail]
                 ZFail [_StencilZFail]
             }
-		    Cull [_Cull]
+            Cull [_Cull]
             ZClip [_ZClip]
-			ZWrite Off
+            ZWrite Off
             ZTest LEqual
             ColorMask [_ColorMask]
             Offset [_OffsetFactor], [_OffsetUnits]
@@ -724,7 +777,7 @@ Shader "Hidden/lilToonMultiFur"
             #pragma multi_compile_fragment POINT DIRECTIONAL SPOT POINT_COOKIE DIRECTIONAL_COOKIE
             #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
             #pragma multi_compile_instancing
-            #pragma fragmentoption ARB_precision_hint_fastest
+            #define LIL_PASS_FORWARDADD
 
             // Transparent mode
             #pragma shader_feature_local UNITY_UI_ALPHACLIP
@@ -762,8 +815,10 @@ Shader "Hidden/lilToonMultiFur"
 
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
-            #define LIL_PASS_FORWARDADD
             #include "Includes/lil_pipeline_brp.hlsl"
+            #include "Includes/lil_common.hlsl"
+            // Insert functions and includes that depend on Unity here
+
             #include "Includes/lil_pass_forward.hlsl"
 
             ENDHLSL
@@ -785,9 +840,9 @@ Shader "Hidden/lilToonMultiFur"
                 Fail [_FurStencilFail]
                 ZFail [_FurStencilZFail]
             }
-		    Cull [_FurCull]
+            Cull [_FurCull]
             ZClip [_FurZClip]
-			ZWrite Off
+            ZWrite Off
             ZTest LEqual
             ColorMask [_FurColorMask]
             Offset [_FurOffsetFactor], [_FurOffsetUnits]
@@ -805,7 +860,7 @@ Shader "Hidden/lilToonMultiFur"
             #pragma multi_compile_fragment POINT DIRECTIONAL SPOT POINT_COOKIE DIRECTIONAL_COOKIE
             #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
             #pragma multi_compile_instancing
-            #pragma fragmentoption ARB_precision_hint_fastest
+            #define LIL_PASS_FORWARDADD
 
             // Transparent mode
             #pragma shader_feature_local UNITY_UI_CLIP_RECT
@@ -819,8 +874,10 @@ Shader "Hidden/lilToonMultiFur"
 
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
-            #define LIL_PASS_FORWARDADD
             #include "Includes/lil_pipeline_brp.hlsl"
+            #include "Includes/lil_common.hlsl"
+            // Insert functions and includes that depend on Unity here
+
             #include "Includes/lil_pass_forward_fur.hlsl"
 
             ENDHLSL
@@ -835,7 +892,7 @@ Shader "Hidden/lilToonMultiFur"
             Name "SHADOW_CASTER"
             Tags {"LightMode" = "ShadowCaster"}
             Offset 1, 1
-		    Cull [_Cull]
+            Cull [_Cull]
 
             HLSLPROGRAM
 
@@ -845,6 +902,7 @@ Shader "Hidden/lilToonMultiFur"
             #pragma fragment frag
             #pragma multi_compile_shadowcaster
             #pragma multi_compile_instancing
+            #define LIL_PASS_SHADOWCASTER
 
             // Transparent mode
             #pragma shader_feature_local UNITY_UI_ALPHACLIP
@@ -860,6 +918,9 @@ Shader "Hidden/lilToonMultiFur"
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
             #include "Includes/lil_pipeline_brp.hlsl"
+            #include "Includes/lil_common.hlsl"
+            // Insert functions and includes that depend on Unity here
+
             #include "Includes/lil_pass_shadowcaster.hlsl"
 
             ENDHLSL
@@ -879,1324 +940,22 @@ Shader "Hidden/lilToonMultiFur"
             #pragma vertex vert
             #pragma fragment frag
             #pragma shader_feature EDITOR_VISUALIZATION
+            #define LIL_PASS_META
 
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
             #include "Includes/lil_pipeline_brp.hlsl"
+            #include "Includes/lil_common.hlsl"
+            // Insert functions and includes that depend on Unity here
+
             #include "Includes/lil_pass_meta.hlsl"
+
             ENDHLSL
         }
+
     }
     Fallback "Unlit/Texture"
-//
-// BRP End
-
-//----------------------------------------------------------------------------------------------------------------------
-// LWRP Start
-/*
-    SubShader
-    {
-        Tags {"RenderType" = "Transparent" "Queue" = "Transparent"}
-
-        // Forward
-        Pass
-        {
-            Name "FORWARD"
-            Tags {"LightMode" = "LightweightForward"}
-
-            Stencil
-            {
-                Ref [_StencilRef]
-                ReadMask [_StencilReadMask]
-                WriteMask [_StencilWriteMask]
-                Comp [_StencilComp]
-                Pass [_StencilPass]
-                Fail [_StencilFail]
-                ZFail [_StencilZFail]
-            }
-            Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            ColorMask [_ColorMask]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            BlendOp [_BlendOp], [_BlendOpAlpha]
-            Blend [_SrcBlend] [_DstBlend], [_SrcBlendAlpha] [_DstBlendAlpha]
-            AlphaToMask [_AlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile_fragment _ _MIXED_LIGHTING_SUBTRACTIVE
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
-            #pragma multi_compile_instancing
-
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Main
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _COLORADDSUBDIFF_ON
-            #pragma shader_feature_local _COLORCOLOR_ON
-            #pragma shader_feature_local _SUNDISK_NONE
-            #pragma shader_feature_local GEOM_TYPE_FROND
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local ANTI_FLICKER
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-            #pragma shader_feature_local _NORMALMAP
-            #pragma shader_feature_local EFFECT_BUMP
-            #pragma shader_feature_local SOURCE_GBUFFER
-            #pragma shader_feature_local _GLOSSYREFLECTIONS_OFF
-            #pragma shader_feature_local _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma shader_feature_local _SPECULARHIGHLIGHTS_OFF
-            #pragma shader_feature_local GEOM_TYPE_MESH
-            #pragma shader_feature_local _METALLICGLOSSMAP
-            #pragma shader_feature_local GEOM_TYPE_LEAF
-            #pragma shader_feature_local _SPECGLOSSMAP
-            #pragma shader_feature_local _PARALLAXMAP
-            #pragma shader_feature_local PIXELSNAP_ON
-            #pragma shader_feature_local _FADING_ON
-            #pragma shader_feature_local _MAPPING_6_FRAMES_LAYOUT
-            #pragma shader_feature_local _SUNDISK_HIGH_QUALITY
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_lwrp.hlsl"
-            #include "Includes/lil_pass_forward.hlsl"
-
-            ENDHLSL
-        }
-
-        // Fur
-        Pass
-        {
-            Name "FORWARD_FUR"
-            Tags {"LightMode" = "LightweightForward"}
-
-            Stencil
-            {
-                Ref [_FurStencilRef]
-                ReadMask [_FurStencilReadMask]
-                WriteMask [_FurStencilWriteMask]
-                Comp [_FurStencilComp]
-                Pass [_FurStencilPass]
-                Fail [_FurStencilFail]
-                ZFail [_FurStencilZFail]
-            }
-            Cull [_FurCull]
-            ZClip [_FurZClip]
-            ZWrite [_FurZWrite]
-            ZTest [_FurZTest]
-            ColorMask [_FurColorMask]
-            Offset [_FurOffsetFactor], [_FurOffsetUnits]
-            BlendOp [_FurBlendOp], [_FurBlendOpAlpha]
-            Blend [_FurSrcBlend] [_FurDstBlend], [_FurSrcBlendAlpha] [_FurDstBlendAlpha]
-            AlphaToMask [_FurAlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile_fragment _ _MIXED_LIGHTING_SUBTRACTIVE
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
-            #pragma multi_compile_instancing
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // Main
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local _FADING_ON
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_lwrp.hlsl"
-            #include "Includes/lil_pass_forward_fur.hlsl"
-
-            ENDHLSL
-        }
-
-        // ShadowCaster
-        Pass
-        {
-            Name "SHADOW_CASTER"
-            Tags {"LightMode" = "ShadowCaster"}
-		    Cull [_Cull]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_lwrp.hlsl"
-            #include "Includes/lil_pass_shadowcaster.hlsl"
-
-            ENDHLSL
-        }
-
-        // DepthOnly
-        Pass
-        {
-            Name "DEPTHONLY"
-            Tags {"LightMode" = "DepthOnly"}
-		    Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_lwrp.hlsl"
-            #include "Includes/lil_pass_depthonly.hlsl"
-
-            ENDHLSL
-        }
-
-        // Meta
-        Pass
-        {
-            Name "META"
-            Tags {"LightMode" = "Meta"}
-            Cull Off
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-
-            // Tone correction and emission
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_lwrp.hlsl"
-            #include "Includes/lil_pass_meta.hlsl"
-            ENDHLSL
-        }
-    }
-    Fallback "Lightweight Render Pipeline/Unlit"
-*/
-// LWRP End
-
-//----------------------------------------------------------------------------------------------------------------------
-// URP Start
-/*
-    //----------------------------------------------------------------------------------------------------------------------
-    // Universal Render Pipeline SM4.5
-    SubShader
-    {
-        Tags {"RenderType" = "Transparent" "Queue" = "Transparent" "ShaderModel" = "4.5"}
-        HLSLINCLUDE
-            #pragma target 4.5
-            #pragma exclude_renderers gles gles3 glcore
-        ENDHLSL
-
-        // Forward
-        Pass
-        {
-            Name "FORWARD"
-            Tags {"LightMode" = "UniversalForward"}
-
-            Stencil
-            {
-                Ref [_StencilRef]
-                ReadMask [_StencilReadMask]
-                WriteMask [_StencilWriteMask]
-                Comp [_StencilComp]
-                Pass [_StencilPass]
-                Fail [_StencilFail]
-                ZFail [_StencilZFail]
-            }
-            Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            ColorMask [_ColorMask]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            BlendOp [_BlendOp], [_BlendOpAlpha]
-            Blend [_SrcBlend] [_DstBlend], [_SrcBlendAlpha] [_DstBlendAlpha]
-            AlphaToMask [_AlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile _ _LIGHT_LAYERS
-            #pragma multi_compile _ _CLUSTERED_RENDERING
-            #pragma multi_compile_fragment _ _LIGHT_COOKIES
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
-            #pragma multi_compile_fragment _ LIGHTMAP_SHADOW_MIXING
-            #pragma multi_compile_fragment _ SHADOWS_SHADOWMASK
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_fragment _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Main
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _COLORADDSUBDIFF_ON
-            #pragma shader_feature_local _COLORCOLOR_ON
-            #pragma shader_feature_local _SUNDISK_NONE
-            #pragma shader_feature_local GEOM_TYPE_FROND
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local ANTI_FLICKER
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-            #pragma shader_feature_local _NORMALMAP
-            #pragma shader_feature_local EFFECT_BUMP
-            #pragma shader_feature_local SOURCE_GBUFFER
-            #pragma shader_feature_local _GLOSSYREFLECTIONS_OFF
-            #pragma shader_feature_local _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma shader_feature_local _SPECULARHIGHLIGHTS_OFF
-            #pragma shader_feature_local GEOM_TYPE_MESH
-            #pragma shader_feature_local _METALLICGLOSSMAP
-            #pragma shader_feature_local GEOM_TYPE_LEAF
-            #pragma shader_feature_local _SPECGLOSSMAP
-            #pragma shader_feature_local _PARALLAXMAP
-            #pragma shader_feature_local PIXELSNAP_ON
-            #pragma shader_feature_local _FADING_ON
-            #pragma shader_feature_local _MAPPING_6_FRAMES_LAYOUT
-            #pragma shader_feature_local _SUNDISK_HIGH_QUALITY
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_forward.hlsl"
-
-            ENDHLSL
-        }
-
-        // Fur
-        Pass
-        {
-            Name "FORWARD_FUR"
-            Tags {"LightMode" = "UniversalForward"}
-
-            Stencil
-            {
-                Ref [_FurStencilRef]
-                ReadMask [_FurStencilReadMask]
-                WriteMask [_FurStencilWriteMask]
-                Comp [_FurStencilComp]
-                Pass [_FurStencilPass]
-                Fail [_FurStencilFail]
-                ZFail [_FurStencilZFail]
-            }
-            Cull [_FurCull]
-            ZClip [_FurZClip]
-            ZWrite [_FurZWrite]
-            ZTest [_FurZTest]
-            ColorMask [_FurColorMask]
-            Offset [_FurOffsetFactor], [_FurOffsetUnits]
-            BlendOp [_FurBlendOp], [_FurBlendOpAlpha]
-            Blend [_FurSrcBlend] [_FurDstBlend], [_FurSrcBlendAlpha] [_FurDstBlendAlpha]
-            AlphaToMask [_FurAlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile _ _LIGHT_LAYERS
-            #pragma multi_compile _ _CLUSTERED_RENDERING
-            #pragma multi_compile_fragment _ _LIGHT_COOKIES
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
-            #pragma multi_compile_fragment _ LIGHTMAP_SHADOW_MIXING
-            #pragma multi_compile_fragment _ SHADOWS_SHADOWMASK
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_fragment _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // Main
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local _FADING_ON
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_forward_fur.hlsl"
-
-            ENDHLSL
-        }
-
-        // ShadowCaster
-        Pass
-        {
-            Name "SHADOW_CASTER"
-            Tags {"LightMode" = "ShadowCaster"}
-		    Cull [_Cull]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_shadowcaster.hlsl"
-
-            ENDHLSL
-        }
-
-        // DepthOnly
-        Pass
-        {
-            Name "DEPTHONLY"
-            Tags {"LightMode" = "DepthOnly"}
-		    Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_depthonly.hlsl"
-
-            ENDHLSL
-        }
-
-        // DepthNormals
-        Pass
-        {
-            Name "DEPTHNORMALS"
-            Tags {"LightMode" = "DepthNormals"}
-		    Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_depthnormals.hlsl"
-
-            ENDHLSL
-        }
-
-        // Universal2D
-        Pass
-        {
-            Name "UNIVERSAL2D"
-            Tags {"LightMode" = "Universal2D"}
-
-            Stencil
-            {
-                Ref [_StencilRef]
-                ReadMask [_StencilReadMask]
-                WriteMask [_StencilWriteMask]
-                Comp [_StencilComp]
-                Pass [_StencilPass]
-                Fail [_StencilFail]
-                ZFail [_StencilZFail]
-            }
-            Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            ColorMask [_ColorMask]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            BlendOp [_BlendOp], [_BlendOpAlpha]
-            Blend [_SrcBlend] [_DstBlend], [_SrcBlendAlpha] [_DstBlendAlpha]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_universal2d.hlsl"
-            ENDHLSL
-        }
-
-        // Meta
-        Pass
-        {
-            Name "META"
-            Tags {"LightMode" = "Meta"}
-            Cull Off
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-
-            // Tone correction and emission
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_meta.hlsl"
-            ENDHLSL
-        }
-    }
-
-    //----------------------------------------------------------------------------------------------------------------------
-    // Universal Render Pipeline
-    SubShader
-    {
-        Tags {"RenderType" = "Transparent" "Queue" = "Transparent"}
-        HLSLINCLUDE
-            #pragma only_renderers gles gles3 glcore d3d11
-        ENDHLSL
-
-        // Forward
-        Pass
-        {
-            Name "FORWARD"
-            Tags {"LightMode" = "UniversalForward"}
-
-            Stencil
-            {
-                Ref [_StencilRef]
-                ReadMask [_StencilReadMask]
-                WriteMask [_StencilWriteMask]
-                Comp [_StencilComp]
-                Pass [_StencilPass]
-                Fail [_StencilFail]
-                ZFail [_StencilZFail]
-            }
-            Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            ColorMask [_ColorMask]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            BlendOp [_BlendOp], [_BlendOpAlpha]
-            Blend [_SrcBlend] [_DstBlend], [_SrcBlendAlpha] [_DstBlendAlpha]
-            AlphaToMask [_AlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile _ _LIGHT_LAYERS
-            #pragma multi_compile _ _CLUSTERED_RENDERING
-            #pragma multi_compile_fragment _ _LIGHT_COOKIES
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
-            #pragma multi_compile_fragment _ LIGHTMAP_SHADOW_MIXING
-            #pragma multi_compile_fragment _ SHADOWS_SHADOWMASK
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_fragment _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Main
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _COLORADDSUBDIFF_ON
-            #pragma shader_feature_local _COLORCOLOR_ON
-            #pragma shader_feature_local _SUNDISK_NONE
-            #pragma shader_feature_local GEOM_TYPE_FROND
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local ANTI_FLICKER
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-            #pragma shader_feature_local _NORMALMAP
-            #pragma shader_feature_local EFFECT_BUMP
-            #pragma shader_feature_local SOURCE_GBUFFER
-            #pragma shader_feature_local _GLOSSYREFLECTIONS_OFF
-            #pragma shader_feature_local _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma shader_feature_local _SPECULARHIGHLIGHTS_OFF
-            #pragma shader_feature_local GEOM_TYPE_MESH
-            #pragma shader_feature_local _METALLICGLOSSMAP
-            #pragma shader_feature_local GEOM_TYPE_LEAF
-            #pragma shader_feature_local _SPECGLOSSMAP
-            #pragma shader_feature_local _PARALLAXMAP
-            #pragma shader_feature_local PIXELSNAP_ON
-            #pragma shader_feature_local _FADING_ON
-            #pragma shader_feature_local _MAPPING_6_FRAMES_LAYOUT
-            #pragma shader_feature_local _SUNDISK_HIGH_QUALITY
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_forward.hlsl"
-
-            ENDHLSL
-        }
-
-        // Fur
-        Pass
-        {
-            Name "FORWARD_FUR"
-            Tags {"LightMode" = "UniversalForward"}
-
-            Stencil
-            {
-                Ref [_FurStencilRef]
-                ReadMask [_FurStencilReadMask]
-                WriteMask [_FurStencilWriteMask]
-                Comp [_FurStencilComp]
-                Pass [_FurStencilPass]
-                Fail [_FurStencilFail]
-                ZFail [_FurStencilZFail]
-            }
-            Cull [_FurCull]
-            ZClip [_FurZClip]
-            ZWrite [_FurZWrite]
-            ZTest [_FurZTest]
-            ColorMask [_FurColorMask]
-            Offset [_FurOffsetFactor], [_FurOffsetUnits]
-            BlendOp [_FurBlendOp], [_FurBlendOpAlpha]
-            Blend [_FurSrcBlend] [_FurDstBlend], [_FurSrcBlendAlpha] [_FurDstBlendAlpha]
-            AlphaToMask [_FurAlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile _ _LIGHT_LAYERS
-            #pragma multi_compile _ _CLUSTERED_RENDERING
-            #pragma multi_compile_fragment _ _LIGHT_COOKIES
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
-            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
-            #pragma multi_compile_fragment _ LIGHTMAP_SHADOW_MIXING
-            #pragma multi_compile_fragment _ SHADOWS_SHADOWMASK
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_fragment _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile_vertex _ FOG_LINEAR FOG_EXP FOG_EXP2
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // Main
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local _FADING_ON
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_forward_fur.hlsl"
-
-            ENDHLSL
-        }
-
-        // ShadowCaster
-        Pass
-        {
-            Name "SHADOW_CASTER"
-            Tags {"LightMode" = "ShadowCaster"}
-		    Cull [_Cull]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
-            #pragma multi_compile_instancing
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_shadowcaster.hlsl"
-
-            ENDHLSL
-        }
-
-        // DepthOnly
-        Pass
-        {
-            Name "DEPTHONLY"
-            Tags {"LightMode" = "DepthOnly"}
-		    Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_depthonly.hlsl"
-
-            ENDHLSL
-        }
-
-        // DepthNormals
-        Pass
-        {
-            Name "DEPTHNORMALS"
-            Tags {"LightMode" = "DepthNormals"}
-		    Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_depthnormals.hlsl"
-
-            ENDHLSL
-        }
-
-        // Universal2D
-        Pass
-        {
-            Name "UNIVERSAL2D"
-            Tags {"LightMode" = "Universal2D"}
-
-            Stencil
-            {
-                Ref [_StencilRef]
-                ReadMask [_StencilReadMask]
-                WriteMask [_StencilWriteMask]
-                Comp [_StencilComp]
-                Pass [_StencilPass]
-                Fail [_StencilFail]
-                ZFail [_StencilZFail]
-            }
-            Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            ColorMask [_ColorMask]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            BlendOp [_BlendOp], [_BlendOpAlpha]
-            Blend [_SrcBlend] [_DstBlend], [_SrcBlendAlpha] [_DstBlendAlpha]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_universal2d.hlsl"
-            ENDHLSL
-        }
-
-        // Meta
-        Pass
-        {
-            Name "META"
-            Tags {"LightMode" = "Meta"}
-            Cull Off
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-
-            // Tone correction and emission
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_urp.hlsl"
-            #include "Includes/lil_pass_meta.hlsl"
-            ENDHLSL
-        }
-    }
-    Fallback "Universal Render Pipeline/Unlit"
-*/
-// URP End
-
-//----------------------------------------------------------------------------------------------------------------------
-// HDRP Start
-/*
-    HLSLINCLUDE
-        #pragma target 4.5
-        #pragma exclude_renderers gles gles3 glcore
-    ENDHLSL
-    SubShader
-    {
-        Tags {"RenderType" = "HDLitShader" "Queue" = "Transparent"}
-
-        // Forward
-        Pass
-        {
-            Name "FORWARD"
-            Tags {"LightMode" = "ForwardOnly"}
-
-            Stencil
-            {
-                WriteMask 6
-                Ref 0
-                Comp Always
-                Pass Replace
-            }
-            Cull [_Cull]
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            ColorMask [_ColorMask]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            BlendOp [_BlendOp], [_BlendOpAlpha]
-            Blend [_SrcBlend] [_DstBlend], [_SrcBlendAlpha] [_DstBlendAlpha]
-            AlphaToMask [_AlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_fragment _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile_fragment _ SHADOWS_SHADOWMASK
-
-            #pragma multi_compile_fragment SCREEN_SPACE_SHADOWS_OFF SCREEN_SPACE_SHADOWS_ON
-            #pragma multi_compile_fragment SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH
-
-            #define SHADERPASS SHADERPASS_FORWARD
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Main
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _COLORADDSUBDIFF_ON
-            #pragma shader_feature_local _COLORCOLOR_ON
-            #pragma shader_feature_local _SUNDISK_NONE
-            #pragma shader_feature_local GEOM_TYPE_FROND
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local ANTI_FLICKER
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-            #pragma shader_feature_local _NORMALMAP
-            #pragma shader_feature_local EFFECT_BUMP
-            #pragma shader_feature_local SOURCE_GBUFFER
-            #pragma shader_feature_local _GLOSSYREFLECTIONS_OFF
-            #pragma shader_feature_local _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma shader_feature_local _SPECULARHIGHLIGHTS_OFF
-            #pragma shader_feature_local GEOM_TYPE_MESH
-            #pragma shader_feature_local _METALLICGLOSSMAP
-            #pragma shader_feature_local GEOM_TYPE_LEAF
-            #pragma shader_feature_local _SPECGLOSSMAP
-            #pragma shader_feature_local _PARALLAXMAP
-            #pragma shader_feature_local PIXELSNAP_ON
-            #pragma shader_feature_local _FADING_ON
-            #pragma shader_feature_local _MAPPING_6_FRAMES_LAYOUT
-            #pragma shader_feature_local _SUNDISK_HIGH_QUALITY
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_hdrp.hlsl"
-            #include "Includes/lil_pass_forward.hlsl"
-
-            ENDHLSL
-        }
-
-        // Fur
-        Pass
-        {
-            Name "FORWARD_FUR"
-            Tags {"LightMode" = "SRPDefaultUnlit"}
-
-            Stencil
-            {
-                WriteMask 6
-                Ref 0
-                Comp Always
-                Pass Replace
-            }
-            Cull [_FurCull]
-            ZClip [_FurZClip]
-            ZWrite [_FurZWrite]
-            ZTest [_FurZTest]
-            ColorMask [_FurColorMask]
-            Offset [_FurOffsetFactor], [_FurOffsetUnits]
-            BlendOp [_FurBlendOp], [_FurBlendOpAlpha]
-            Blend [_FurSrcBlend] [_FurDstBlend], [_FurSrcBlendAlpha] [_FurDstBlendAlpha]
-            AlphaToMask [_FurAlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma multi_compile_fragment _ LIGHTMAP_ON
-            #pragma multi_compile_fragment _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile_fragment _ SHADOWS_SHADOWMASK
-
-            #define SHADERPASS SHADERPASS_FORWARD
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // Main
-            #pragma shader_feature_local _REQUIRE_UV2
-            #pragma shader_feature_local _FADING_ON
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_hdrp.hlsl"
-            #include "Includes/lil_pass_forward_fur.hlsl"
-
-            ENDHLSL
-        }
-
-        // ShadowCaster
-        Pass
-        {
-            Name "SHADOW_CASTER"
-            Tags {"LightMode" = "ShadowCaster"}
-
-            Cull[_Cull]
-            ZClip [_ZClip]
-            ZWrite On
-            ZTest LEqual
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-            #define SHADERPASS SHADERPASS_SHADOWS
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #define LIL_ONEPASS_FUR
-            #include "Includes/lil_pipeline_hdrp.hlsl"
-            #include "Includes/lil_pass_depthonly.hlsl"
-
-            ENDHLSL
-        }
-
-        // DepthOnly
-        Pass
-        {
-            Name "DEPTHONLY"
-            Tags {"LightMode" = "DepthForwardOnly"}
-
-            Stencil
-            {
-                WriteMask 8
-                Ref 0
-                Comp Always
-                Pass Replace
-            }
-            Cull Back
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            AlphaToMask [_AlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma multi_compile _ WRITE_NORMAL_BUFFER
-            #pragma multi_compile _ WRITE_MSAA_DEPTH
-
-            #define SHADERPASS SHADERPASS_DEPTH_ONLY
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #define LIL_ONEPASS_FUR
-            #include "Includes/lil_pipeline_hdrp.hlsl"
-            #include "Includes/lil_pass_depthonly.hlsl"
-
-            ENDHLSL
-        }
-
-        // MotionVectors
-        Pass
-        {
-            Name "MOTIONVECTORS"
-            Tags {"LightMode" = "MotionVectors"}
-
-            Stencil
-            {
-                WriteMask 40
-                Ref 32
-                Comp Always
-                Pass Replace
-            }
-            Cull Back
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            AlphaToMask [_AlphaToMask]
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma multi_compile _ WRITE_NORMAL_BUFFER
-            #pragma multi_compile _ WRITE_MSAA_DEPTH
-
-            #define SHADERPASS SHADERPASS_MOTION_VECTORS
-
-            // Transparent mode
-            #pragma shader_feature_local UNITY_UI_ALPHACLIP
-            #pragma shader_feature_local UNITY_UI_CLIP_RECT
-
-            // AlphaMask and Dissolve
-            #pragma shader_feature_local _COLOROVERLAY_ON
-            #pragma shader_feature_local GEOM_TYPE_BRANCH_DETAIL
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #define LIL_ONEPASS_FUR
-            #include "Includes/lil_pipeline_hdrp.hlsl"
-            #include "Includes/lil_pass_motionvectors.hlsl"
-
-            ENDHLSL
-        }
-
-        // Meta
-        Pass
-        {
-            Name "META"
-            Tags {"LightMode" = "META"}
-            Cull Off
-
-            HLSLPROGRAM
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Build Option
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma instancing_options renderinglayer
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-            #define SHADERPASS SHADERPASS_LIGHT_TRANSPORT
-
-            // Tone correction and emission
-            #pragma shader_feature_local EFFECT_HUE_VARIATION
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local GEOM_TYPE_BRANCH
-            #pragma shader_feature_local _SUNDISK_SIMPLE
-
-            // Replace keywords
-            #include "Includes/lil_replace_keywords.hlsl"
-
-            //----------------------------------------------------------------------------------------------------------------------
-            // Pass
-            #include "Includes/lil_pipeline_hdrp.hlsl"
-            #include "Includes/lil_pass_meta.hlsl"
-            ENDHLSL
-        }
-    }
-    Fallback "HDRP/Unlit"
-*/
-// HDRP End
 
     CustomEditor "lilToon.lilToonInspector"
 }
+

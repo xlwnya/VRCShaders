@@ -11,6 +11,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         [lilToggle]     _FlipNormal                 ("Flip Backface Normal", Int) = 0
         [lilToggle]     _ShiftBackfaceUV            ("Shift Backface UV", Int) = 0
                         _BackfaceForceShadow        ("Backface Force Shadow", Range(0,1)) = 0
+        [lilHDR]        _BackfaceColor              ("Color", Color) = (0,0,0,0)
                         _VertexLightStrength        ("Vertex Light Strength", Range(0,1)) = 0
                         _LightMinLimit              ("Light Min Limit", Range(0,1)) = 0.05
                         _LightMaxLimit              ("Light Max Limit", Range(0,10)) = 1
@@ -18,12 +19,12 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
                         _MonochromeLighting         ("Monochrome lighting", Range(0,1)) = 0
                         _AlphaBoostFA               ("Alpha Boost", Range(1,100)) = 10
                         _lilDirectionalLightStrength ("Directional Light Strength", Range(0,1)) = 1
-        [lilVec3B]      _LightDirectionOverride     ("Light Direction Override", Vector) = (0,0.001,0,0)
+        [lilVec3B]      _LightDirectionOverride     ("Light Direction Override", Vector) = (0.001,0.002,0.001,0)
 
         //----------------------------------------------------------------------------------------------------------------------
         // Main
-        [lilHDR]        _Color                      ("Color", Color) = (1,1,1,1)
-                        _MainTex                    ("Texture", 2D) = "white" {}
+        [lilHDR] [MainColor] _Color                 ("Color", Color) = (1,1,1,1)
+        [MainTexture]   _MainTex                    ("Texture", 2D) = "white" {}
         [lilUVAnim]     _MainTex_ScrollRotate       ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
         [lilHSVG]       _MainTexHSVG                ("Hue|Saturation|Value|Gamma", Vector) = (0,1,1,1)
                         _MainGradationStrength      ("Gradation Strength", Range(0, 1)) = 0
@@ -36,6 +37,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         [lilHDR]        _Color2nd                   ("Color", Color) = (1,1,1,1)
                         _Main2ndTex                 ("Texture", 2D) = "white" {}
         [lilEnum]       _Main2ndTex_UVMode          ("UV Mode|UV0|UV1|UV2|UV3|MatCap", Int) = 0
+        [lilEnum]       _Main2ndTex_Cull            ("Cull Mode|Off|Front|Back", Int) = 0
         [lilAngle]      _Main2ndTexAngle            ("Angle", Float) = 0
         [lilDecalAnim]  _Main2ndTexDecalAnimation   ("Animation|X Size|Y Size|Frames|FPS", Vector) = (1,1,1,30)
         [lilDecalSub]   _Main2ndTexDecalSubParam    ("Ratio X|Ratio Y|Fix Border", Vector) = (1,1,0,1)
@@ -65,6 +67,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
                         _Main3rdTex                 ("Texture", 2D) = "white" {}
         [lilAngle]      _Main3rdTexAngle            ("Angle", Float) = 0
         [lilEnum]       _Main3rdTex_UVMode          ("UV Mode|UV0|UV1|UV2|UV3|MatCap", Int) = 0
+        [lilEnum]       _Main3rdTex_Cull            ("Cull Mode|Off|Front|Back", Int) = 0
         [lilDecalAnim]  _Main3rdTexDecalAnimation   ("Animation|X Size|Y Size|Frames|FPS", Vector) = (1,1,1,30)
         [lilDecalSub]   _Main3rdTexDecalSubParam    ("Ratio X|Ratio Y|Fix Border", Vector) = (1,1,0,1)
         [lilToggle]     _Main3rdTexIsDecal          ("As Decal", Int) = 0
@@ -89,7 +92,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         //----------------------------------------------------------------------------------------------------------------------
         // Alpha Mask
         [lilEnumLabel]  _AlphaMaskMode              ("AlphaMask|", Int) = 0
-        [NoScaleOffset] _AlphaMask                  ("AlphaMask", 2D) = "white" {}
+                        _AlphaMask                  ("AlphaMask", 2D) = "white" {}
                         _AlphaMaskScale             ("Scale", Float) = 1
                         _AlphaMaskValue             ("Offset", Float) = 0
 
@@ -103,6 +106,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         // NormalMap 2nd
         [lilToggleLeft] _UseBump2ndMap              ("Use Normal Map 2nd", Int) = 0
         [Normal]        _Bump2ndMap                 ("Normal Map", 2D) = "bump" {}
+        [lilEnum]       _Bump2ndMap_UVMode          ("UV Mode|UV0|UV1|UV2|UV3", Int) = 0
                         _Bump2ndScale               ("Scale", Range(-10,10)) = 1
         [NoScaleOffset] _Bump2ndScaleMask           ("Mask", 2D) = "white" {}
 
@@ -132,6 +136,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         [lilToggleLeft] _UseBacklight               ("Use Backlight", Int) = 0
         [lilHDR]        _BacklightColor             ("Color", Color) = (0.85,0.8,0.7,1.0)
         [NoScaleOffset] _BacklightColorTex          ("Texture", 2D) = "white" {}
+                        _BacklightMainStrength      ("Blend Main", Range(0, 1)) = 0
                         _BacklightNormalStrength    ("Normal Strength", Range(0, 1)) = 1.0
                         _BacklightBorder            ("Border", Range(0, 1)) = 0.35
                         _BacklightBlur              ("Blur", Range(0, 1)) = 0.05
@@ -143,33 +148,42 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         //----------------------------------------------------------------------------------------------------------------------
         // Shadow
         [lilToggleLeft] _UseShadow                  ("Use Shadow", Int) = 0
-        [lilToggle]     _ShadowReceive              ("Receive Shadow", Int) = 0
                         _ShadowStrength             ("Strength", Range(0, 1)) = 1
         [NoScaleOffset] _ShadowStrengthMask         ("Strength", 2D) = "white" {}
+        [lilLOD]        _ShadowStrengthMaskLOD      ("LOD", Range(0, 1)) = 0
         [NoScaleOffset] _ShadowBorderMask           ("Border", 2D) = "white" {}
+        [lilLOD]        _ShadowBorderMaskLOD        ("LOD", Range(0, 1)) = 0
         [NoScaleOffset] _ShadowBlurMask             ("Blur", 2D) = "white" {}
+        [lilLOD]        _ShadowBlurMaskLOD          ("LOD", Range(0, 1)) = 0
         [lilFFFF]       _ShadowAOShift              ("1st Scale|1st Offset|2nd Scale|2nd Offset", Vector) = (1,0,1,0)
         [lilFF]         _ShadowAOShift2             ("3rd Scale|3rd Offset", Vector) = (1,0,1,0)
         [lilToggle]     _ShadowPostAO               ("Post AO", Int) = 0
-                        _ShadowColor                ("Shadow Color", Color) = (0.7,0.75,0.85,1.0)
+        [lilEnum]       _ShadowColorType            ("Color Type|Normal|LUT", Int) = 0
+                        _ShadowColor                ("Shadow Color", Color) = (0.82,0.76,0.85,1.0)
         [NoScaleOffset] _ShadowColorTex             ("Shadow Color", 2D) = "black" {}
                         _ShadowNormalStrength       ("Normal Strength", Range(0, 1)) = 1.0
                         _ShadowBorder               ("Border", Range(0, 1)) = 0.5
                         _ShadowBlur                 ("Blur", Range(0, 1)) = 0.1
-                        _Shadow2ndColor             ("2nd Color", Color) = (0,0,0,0)
+                        _ShadowReceive              ("Receive Shadow", Range(0, 1)) = 0
+                        _Shadow2ndColor             ("2nd Color", Color) = (0.68,0.66,0.79,1)
         [NoScaleOffset] _Shadow2ndColorTex          ("2nd Color", 2D) = "black" {}
                         _Shadow2ndNormalStrength    ("2nd Normal Strength", Range(0, 1)) = 1.0
-                        _Shadow2ndBorder            ("2nd Border", Range(0, 1)) = 0.5
-                        _Shadow2ndBlur              ("2nd Blur", Range(0, 1)) = 0.3
+                        _Shadow2ndBorder            ("2nd Border", Range(0, 1)) = 0.15
+                        _Shadow2ndBlur              ("2nd Blur", Range(0, 1)) = 0.1
+                        _Shadow2ndReceive           ("Receive Shadow", Range(0, 1)) = 0
                         _Shadow3rdColor             ("3rd Color", Color) = (0,0,0,0)
         [NoScaleOffset] _Shadow3rdColorTex          ("3rd Color", 2D) = "black" {}
                         _Shadow3rdNormalStrength    ("3rd Normal Strength", Range(0, 1)) = 1.0
                         _Shadow3rdBorder            ("3rd Border", Range(0, 1)) = 0.25
                         _Shadow3rdBlur              ("3rd Blur", Range(0, 1)) = 0.1
-                        _ShadowBorderColor          ("Border Color", Color) = (1,0,0,1)
-                        _ShadowBorderRange          ("Border Range", Range(0, 1)) = 0
-                        _ShadowMainStrength         ("Contrast", Range(0, 1)) = 1
+                        _Shadow3rdReceive           ("Receive Shadow", Range(0, 1)) = 0
+                        _ShadowBorderColor          ("Border Color", Color) = (1,0.1,0,1)
+                        _ShadowBorderRange          ("Border Range", Range(0, 1)) = 0.08
+                        _ShadowMainStrength         ("Contrast", Range(0, 1)) = 0
                         _ShadowEnvStrength          ("Environment Strength", Range(0, 1)) = 0
+        [lilEnum]       _ShadowMaskType             ("Mask Type|Strength|Flat", Int) = 0
+                        _ShadowFlatBorder           ("Border", Range(-2, 2)) = 1
+                        _ShadowFlatBlur             ("Blur", Range(0.001, 2)) = 1
 
         //----------------------------------------------------------------------------------------------------------------------
         // Reflection
@@ -183,6 +197,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         // Reflectance
         [Gamma]         _Reflectance                ("Reflectance", Range(0, 1)) = 0.04
         // Reflection
+                        _GSAAStrength               ("GSAA", Range(0, 1)) = 0
         [lilToggle]     _ApplySpecular              ("Apply Specular", Int) = 1
         [lilToggle]     _ApplySpecularFA            ("Apply Specular in ForwardAdd", Int) = 1
         [lilToggle]     _SpecularToon               ("Specular Toon", Int) = 1
@@ -198,12 +213,14 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         [lilHDR]        _ReflectionCubeColor        ("Color", Color) = (0,0,0,1)
         [lilToggle]     _ReflectionCubeOverride     ("Override", Int) = 0
                         _ReflectionCubeEnableLighting ("Enable Lighting", Range(0, 1)) = 1
+        [lilEnum]       _ReflectionBlendMode        ("Blend Mode|Normal|Add|Screen|Multiply", Int) = 1
 
         //----------------------------------------------------------------------------------------------------------------------
         // MatCap
         [lilToggleLeft] _UseMatCap                  ("Use MatCap", Int) = 0
         [lilHDR]        _MatCapColor                ("Color", Color) = (1,1,1,1)
                         _MatCapTex                  ("Texture", 2D) = "white" {}
+                        _MatCapMainStrength         ("Blend Main", Range(0, 1)) = 0
         [lilVec2R]      _MatCapBlendUV1             ("Blend UV1", Vector) = (0,0,0,0)
         [lilToggle]     _MatCapZRotCancel           ("Z-axis rotation cancellation", Int) = 1
         [lilToggle]     _MatCapPerspective          ("Fix Perspective", Int) = 1
@@ -226,6 +243,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         [lilToggleLeft] _UseMatCap2nd               ("Use MatCap 2nd", Int) = 0
         [lilHDR]        _MatCap2ndColor             ("Color", Color) = (1,1,1,1)
                         _MatCap2ndTex               ("Texture", 2D) = "white" {}
+                        _MatCap2ndMainStrength      ("Blend Main", Range(0, 1)) = 0
         [lilVec2R]      _MatCap2ndBlendUV1          ("Blend UV1", Vector) = (0,0,0,0)
         [lilToggle]     _MatCap2ndZRotCancel        ("Z-axis rotation cancellation", Int) = 1
         [lilToggle]     _MatCap2ndPerspective       ("Fix Perspective", Int) = 1
@@ -246,15 +264,16 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         //----------------------------------------------------------------------------------------------------------------------
         // Rim
         [lilToggleLeft] _UseRim                     ("Use Rim", Int) = 0
-        [lilHDR]        _RimColor                   ("Color", Color) = (1,1,1,1)
+        [lilHDR]        _RimColor                   ("Color", Color) = (0.66,0.5,0.48,1)
         [NoScaleOffset] _RimColorTex                ("Texture", 2D) = "white" {}
+                        _RimMainStrength            ("Blend Main", Range(0, 1)) = 0
                         _RimNormalStrength          ("Normal Strength", Range(0, 1)) = 1.0
                         _RimBorder                  ("Border", Range(0, 1)) = 0.5
-                        _RimBlur                    ("Blur", Range(0, 1)) = 0.1
-        [PowerSlider(3.0)]_RimFresnelPower          ("Fresnel Power", Range(0.01, 50)) = 3.0
+                        _RimBlur                    ("Blur", Range(0, 1)) = 0.65
+        [PowerSlider(3.0)]_RimFresnelPower          ("Fresnel Power", Range(0.01, 50)) = 3.5
                         _RimEnableLighting          ("Enable Lighting", Range(0, 1)) = 1
-                        _RimShadowMask              ("Shadow Mask", Range(0, 1)) = 0
-        [lilToggle]     _RimBackfaceMask            ("Backface Mask", Int) = 0
+                        _RimShadowMask              ("Shadow Mask", Range(0, 1)) = 0.5
+        [lilToggle]     _RimBackfaceMask            ("Backface Mask", Int) = 1
                         _RimVRParallaxStrength      ("VR Parallax Strength", Range(0, 1)) = 1
         [lilToggle]     _RimApplyTransparency       ("Apply Transparency", Int) = 1
                         _RimDirStrength             ("Light direction strength", Range(0, 1)) = 0
@@ -270,16 +289,23 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         [lilEnum]       _GlitterUVMode              ("UV Mode|UV0|UV1", Int) = 0
         [lilHDR]        _GlitterColor               ("Color", Color) = (1,1,1,1)
                         _GlitterColorTex            ("Texture", 2D) = "white" {}
+        [lilEnum]       _GlitterColorTex_UVMode     ("UV Mode|UV0|UV1|UV2|UV3", Int) = 0
                         _GlitterMainStrength        ("Main Color Strength", Range(0, 1)) = 0
                         _GlitterNormalStrength      ("Normal Strength", Range(0, 1)) = 1.0
+                        _GlitterScaleRandomize      ("Scale Randomize", Range(0, 1)) = 0
+        [lilToggle]     _GlitterApplyShape          ("Apply Shape", Int) = 0
+                        _GlitterShapeTex            ("Texture", 2D) = "white" {}
+        [lilVec2]       _GlitterAtras               ("Atras", Vector) = (1,1,0,0)
+        [lilToggle]     _GlitterAngleRandomize      ("Angle Randomize", Int) = 0
         [lilGlitParam1] _GlitterParams1             ("Tiling|Particle Size|Contrast", Vector) = (256,256,0.16,50)
         [lilGlitParam2] _GlitterParams2             ("Blink Speed|Angle|Blend Light Direction|Color Randomness", Vector) = (0.25,0,0,0)
                         _GlitterPostContrast        ("Post Contrast", Float) = 1
+                        _GlitterSensitivity         ("Sensitivity", Float) = 0.25
                         _GlitterEnableLighting      ("Enable Lighting", Range(0, 1)) = 1
                         _GlitterShadowMask          ("Shadow Mask", Range(0, 1)) = 0
         [lilToggle]     _GlitterBackfaceMask        ("Backface Mask", Int) = 0
         [lilToggle]     _GlitterApplyTransparency   ("Apply Transparency", Int) = 1
-                        _GlitterVRParallaxStrength  ("VR Parallax Strength", Range(0, 1)) = 1
+                        _GlitterVRParallaxStrength  ("VR Parallax Strength", Range(0, 1)) = 0
 
         //----------------------------------------------------------------------------------------------------------------------
         // Emmision
@@ -288,6 +314,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
                         _EmissionMap                ("Texture", 2D) = "white" {}
         [lilUVAnim]     _EmissionMap_ScrollRotate   ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
         [lilEnum]       _EmissionMap_UVMode         ("UV Mode|UV0|UV1|UV2|UV3|Rim", Int) = 0
+                        _EmissionMainStrength       ("Main Color Strength", Range(0, 1)) = 0
                         _EmissionBlend              ("Blend", Range(0,1)) = 1
                         _EmissionBlendMask          ("Mask", 2D) = "white" {}
         [lilUVAnim]     _EmissionBlendMask_ScrollRotate ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
@@ -324,6 +351,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
                         _Emission2ndMap             ("Texture", 2D) = "white" {}
         [lilUVAnim]     _Emission2ndMap_ScrollRotate ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
         [lilEnum]       _Emission2ndMap_UVMode      ("UV Mode|UV0|UV1|UV2|UV3|Rim", Int) = 0
+                        _Emission2ndMainStrength    ("Main Color Strength", Range(0, 1)) = 0
                         _Emission2ndBlend           ("Blend", Range(0,1)) = 1
                         _Emission2ndBlendMask       ("Mask", 2D) = "white" {}
         [lilUVAnim]     _Emission2ndBlendMask_ScrollRotate ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
@@ -356,6 +384,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         //----------------------------------------------------------------------------------------------------------------------
         // Parallax
         [lilToggleLeft] _UseParallax                ("Use Parallax", Int) = 0
+        [lilToggle]     _UsePOM                     ("Use POM", Int) = 0
         [NoScaleOffset] _ParallaxMap                ("Parallax Map", 2D) = "gray" {}
                         _Parallax                   ("Parallax Scale", float) = 0.02
                         _ParallaxOffset             ("Parallax Offset", float) = 0.5
@@ -404,6 +433,50 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
                         _Keys                       ("Keys", Vector) = (0,0,0,0)
 
         //----------------------------------------------------------------------------------------------------------------------
+        // Outline
+        [lilHDR]        _OutlineColor               ("Outline Color", Color) = (0.6,0.56,0.73,1)
+                        _OutlineTex                 ("Texture", 2D) = "white" {}
+        [lilUVAnim]     _OutlineTex_ScrollRotate    ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
+        [lilHSVG]       _OutlineTexHSVG             ("Hue|Saturation|Value|Gamma", Vector) = (0,1,1,1)
+        [lilHDR]        _OutlineLitColor            ("Lit Color", Color) = (1.0,0.2,0,0)
+        [lilToggle]     _OutlineLitApplyTex         ("Apply Tex", Int) = 0
+                        _OutlineLitScale            ("Scale", Float) = 10
+                        _OutlineLitOffset           ("Offset", Float) = -8
+        [lilToggle]     _OutlineLitShadowReceive    ("Receive Shadow", Int) = 0
+        [lilOLWidth]    _OutlineWidth               ("Width", Range(0,1)) = 0.08
+        [NoScaleOffset] _OutlineWidthMask           ("Width", 2D) = "white" {}
+                        _OutlineFixWidth            ("Fix Width", Range(0,1)) = 0.5
+        [lilEnum]       _OutlineVertexR2Width       ("Vertex Color|None|R|RGBA", Int) = 0
+        [lilToggle]     _OutlineDeleteMesh          ("Delete Mesh", Int) = 0
+        [NoScaleOffset][Normal] _OutlineVectorTex   ("Vector", 2D) = "bump" {}
+        [lilEnum]       _OutlineVectorUVMode        ("UV Mode|UV0|UV1|UV2|UV3", Int) = 0
+                        _OutlineVectorScale         ("Vector scale", Range(-10,10)) = 1
+                        _OutlineEnableLighting      ("Enable Lighting", Range(0, 1)) = 1
+                        _OutlineZBias               ("Z Bias", Float) = 0
+        [lilToggle]     _OutlineDisableInVR         ("Disable in VR", Int) = 0
+
+        //----------------------------------------------------------------------------------------------------------------------
+        // Tessellation
+                        _TessEdge                   ("Tessellation Edge", Range(1, 100)) = 10
+                        _TessStrength               ("Tessellation Strength", Range(0, 1)) = 0.5
+                        _TessShrink                 ("Tessellation Shrink", Range(0, 1)) = 0.0
+        [IntRange]      _TessFactorMax              ("Tessellation Max", Range(1, 8)) = 3
+
+        //----------------------------------------------------------------------------------------------------------------------
+        // For Multi
+        [lilToggleLeft] _UseOutline                 ("Use Outline", Int) = 0
+        [lilEnum]       _TransparentMode            ("Rendering Mode|Opaque|Cutout|Transparent|Refraction|Fur|FurCutout|Gem", Int) = 0
+        [lilToggle]     _UseClippingCanceller       ("Use Clipping Canceller", Int) = 0
+        [lilToggle]     _AsOverlay                  ("As Overlay", Int) = 0
+
+        //----------------------------------------------------------------------------------------------------------------------
+        // Save (Unused)
+        [HideInInspector]                               _BaseColor          ("Color", Color) = (1,1,1,1)
+        [HideInInspector]                               _BaseMap            ("Texture", 2D) = "white" {}
+        [HideInInspector]                               _BaseColorMap       ("Texture", 2D) = "white" {}
+        [HideInInspector]                               _lilToonVersion     ("Version", Int) = 32
+
+        //----------------------------------------------------------------------------------------------------------------------
         // Advanced
         [lilEnum]                                       _Cull               ("Cull Mode|Off|Front|Back", Int) = 2
         [Enum(UnityEngine.Rendering.BlendMode)]         _SrcBlend           ("SrcBlend", Int) = 1
@@ -432,27 +505,7 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
                                                         _OffsetUnits        ("Offset Units", Float) = 0
         [lilColorMask]                                  _ColorMask          ("Color Mask", Int) = 15
         [lilToggle]                                     _AlphaToMask        ("AlphaToMask", Int) = 0
-
-        //----------------------------------------------------------------------------------------------------------------------
-        // Tessellation
-                        _TessEdge                   ("Tessellation Edge", Range(1, 100)) = 10
-                        _TessStrength               ("Tessellation Strength", Range(0, 1)) = 0.5
-                        _TessShrink                 ("Tessellation Shrink", Range(0, 1)) = 0.0
-        [IntRange]      _TessFactorMax              ("Tessellation Max", Range(1, 8)) = 3
-
-        //----------------------------------------------------------------------------------------------------------------------
-        // Outline
-        [lilHDR]        _OutlineColor               ("Outline Color", Color) = (0.8,0.85,0.9,1)
-                        _OutlineTex                 ("Texture", 2D) = "white" {}
-        [lilUVAnim]     _OutlineTex_ScrollRotate    ("Angle|UV Animation|Scroll|Rotate", Vector) = (0,0,0,0)
-        [lilHSVG]       _OutlineTexHSVG             ("Hue|Saturation|Value|Gamma", Vector) = (0,1,1,1)
-        [lilOLWidth]    _OutlineWidth               ("Width", Range(0,1)) = 0.05
-        [NoScaleOffset] _OutlineWidthMask           ("Width", 2D) = "white" {}
-        [lilToggle]     _OutlineFixWidth            ("Fix Width", Int) = 1
-        [lilEnum]       _OutlineVertexR2Width       ("Vertex Color|None|R|RGBA", Int) = 0
-        [NoScaleOffset][Normal] _OutlineVectorTex   ("Vector", 2D) = "bump" {}
-                        _OutlineVectorScale         ("Vector scale", Range(-10,10)) = 1
-                        _OutlineEnableLighting      ("Enable Lighting", Range(0, 1)) = 1
+                                                        _lilShadowCasterBias ("Shadow Caster Bias", Float) = 0
 
         //----------------------------------------------------------------------------------------------------------------------
         // Outline Advanced
@@ -485,79 +538,52 @@ Shader "Hidden/lilToonTessellationTwoPassTransparentOutline"
         [lilToggle]                                     _OutlineAlphaToMask         ("AlphaToMask", Int) = 0
 
         //----------------------------------------------------------------------------------------------------------------------
-        // Save (Unused)
-        [HideInInspector] [MainColor]                   _BaseColor          ("Color", Color) = (1,1,1,1)
-        [HideInInspector] [MainTexture]                 _BaseMap            ("Texture", 2D) = "white" {}
-        [HideInInspector]                               _BaseColorMap       ("Texture", 2D) = "white" {}
-        [HideInInspector]                               _lilToonVersion     ("Version", Int) = 0
+        // Pre
+        [lilHDR] [MainColor]                            _PreColor               ("Pre Color", Color) = (1,1,1,1)
+        [lilEnum]                                       _PreOutType             ("Out Type|Normal|Flat|Mono", Int) = 0
+                                                        _PreCutoff              ("Pre Cutoff", Range(-0.001,1.001)) = 0.5
+        [lilEnum]                                       _PreCull                ("Cull Mode|Off|Front|Back", Int) = 2
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreSrcBlend            ("SrcBlend", Int) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreDstBlend            ("DstBlend", Int) = 10
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreSrcBlendAlpha       ("SrcBlendAlpha", Int) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreDstBlendAlpha       ("DstBlendAlpha", Int) = 10
+        [Enum(UnityEngine.Rendering.BlendOp)]           _PreBlendOp             ("BlendOp", Int) = 0
+        [Enum(UnityEngine.Rendering.BlendOp)]           _PreBlendOpAlpha        ("BlendOpAlpha", Int) = 0
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreSrcBlendFA          ("ForwardAdd SrcBlend", Int) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreDstBlendFA          ("ForwardAdd DstBlend", Int) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreSrcBlendAlphaFA     ("ForwardAdd SrcBlendAlpha", Int) = 0
+        [Enum(UnityEngine.Rendering.BlendMode)]         _PreDstBlendAlphaFA     ("ForwardAdd DstBlendAlpha", Int) = 1
+        [Enum(UnityEngine.Rendering.BlendOp)]           _PreBlendOpFA           ("ForwardAdd BlendOp", Int) = 4
+        [Enum(UnityEngine.Rendering.BlendOp)]           _PreBlendOpAlphaFA      ("ForwardAdd BlendOpAlpha", Int) = 4
+        [lilToggle]                                     _PreZClip               ("ZClip", Int) = 1
+        [lilToggle]                                     _PreZWrite              ("ZWrite", Int) = 1
+        [Enum(UnityEngine.Rendering.CompareFunction)]   _PreZTest               ("ZTest", Int) = 4
+        [IntRange]                                      _PreStencilRef          ("Stencil Reference Value", Range(0, 255)) = 0
+        [IntRange]                                      _PreStencilReadMask     ("Stencil ReadMask Value", Range(0, 255)) = 255
+        [IntRange]                                      _PreStencilWriteMask    ("Stencil WriteMask Value", Range(0, 255)) = 255
+        [Enum(UnityEngine.Rendering.CompareFunction)]   _PreStencilComp         ("Stencil Compare Function", Float) = 8
+        [Enum(UnityEngine.Rendering.StencilOp)]         _PreStencilPass         ("Stencil Pass", Float) = 0
+        [Enum(UnityEngine.Rendering.StencilOp)]         _PreStencilFail         ("Stencil Fail", Float) = 0
+        [Enum(UnityEngine.Rendering.StencilOp)]         _PreStencilZFail        ("Stencil ZFail", Float) = 0
+                                                        _PreOffsetFactor        ("Offset Factor", Float) = 0
+                                                        _PreOffsetUnits         ("Offset Units", Float) = 0
+        [lilColorMask]                                  _PreColorMask           ("Color Mask", Int) = 15
+        [lilToggle]                                     _PreAlphaToMask         ("AlphaToMask", Int) = 0
     }
 
-//----------------------------------------------------------------------------------------------------------------------
-// BRP Start
-//
     SubShader
     {
         Tags {"RenderType" = "TransparentCutout" "Queue" = "AlphaTest+10"}
         UsePass "Hidden/ltspass_tess_transparent/FORWARD_BACK"
         UsePass "Hidden/ltspass_tess_transparent/FORWARD"
         UsePass "Hidden/ltspass_tess_transparent/FORWARD_OUTLINE"
+        UsePass "Hidden/ltspass_tess_transparent/FORWARD_ADD"
+        UsePass "Hidden/ltspass_tess_transparent/FORWARD_ADD_OUTLINE"
         UsePass "Hidden/ltspass_tess_transparent/SHADOW_CASTER_OUTLINE"
         UsePass "Hidden/ltspass_tess_transparent/META"
     }
     Fallback "Unlit/Texture"
-//
-// BRP End
-
-//----------------------------------------------------------------------------------------------------------------------
-// LWRP Start
-/*
-    SubShader
-    {
-        Tags {"RenderType" = "TransparentCutout" "Queue" = "AlphaTest+10"}
-        UsePass "Hidden/ltspass_tess_transparent/FORWARD"
-        UsePass "Hidden/ltspass_tess_transparent/FORWARD_OUTLINE"
-        UsePass "Hidden/ltspass_tess_transparent/SHADOW_CASTER"
-        UsePass "Hidden/ltspass_tess_transparent/DEPTHONLY"
-        UsePass "Hidden/ltspass_tess_transparent/META"
-    }
-    Fallback "Lightweight Render Pipeline/Unlit"
-*/
-// LWRP End
-
-//----------------------------------------------------------------------------------------------------------------------
-// URP Start
-/*
-    SubShader
-    {
-        Tags {"RenderType" = "TransparentCutout" "Queue" = "AlphaTest+10"}
-        UsePass "Hidden/ltspass_tess_transparent/FORWARD"
-        UsePass "Hidden/ltspass_tess_transparent/FORWARD_OUTLINE"
-        UsePass "Hidden/ltspass_tess_transparent/SHADOW_CASTER"
-        UsePass "Hidden/ltspass_tess_transparent/DEPTHONLY"
-        UsePass "Hidden/ltspass_tess_transparent/DEPTHNORMALS"
-        UsePass "Hidden/ltspass_tess_transparent/UNIVERSAL2D"
-        UsePass "Hidden/ltspass_tess_transparent/META"
-    }
-    Fallback "Universal Render Pipeline/Unlit"
-*/
-// URP End
-
-//----------------------------------------------------------------------------------------------------------------------
-// HDRP Start
-/*
-    SubShader
-    {
-        Tags {"RenderType" = "HDLitShader" "Queue" = "Transparent"}
-        UsePass "Hidden/ltspass_tess_transparent/FORWARD"
-        UsePass "Hidden/ltspass_tess_transparent/FORWARD_OUTLINE"
-        UsePass "Hidden/ltspass_tess_transparent/SHADOW_CASTER"
-        UsePass "Hidden/ltspass_tess_transparent/DEPTHONLY_OUTLINE"
-        UsePass "Hidden/ltspass_tess_transparent/MOTIONVECTORS_OUTLINE"
-        UsePass "Hidden/ltspass_tess_transparent/META"
-    }
-    Fallback "HDRP/Unlit"
-*/
-// HDRP End
 
     CustomEditor "lilToon.lilToonInspector"
 }
+

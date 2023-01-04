@@ -7,11 +7,11 @@
             #pragma fragmentoption ARB_precision_hint_fastest
             #define LIL_FUR
 
+            #pragma lil_skip_variants_shadows
             #pragma lil_skip_variants_decals
             #pragma lil_skip_variants_addlightshadows
             #pragma lil_skip_variants_probevolumes
             #pragma lil_skip_variants_ao
-            #pragma lil_skip_variants_lightlists
         ENDHLSL
 
         *LIL_INSERT_PASS_PRE*
@@ -20,7 +20,7 @@
         Pass
         {
             Name "FORWARD"
-            Tags {"LightMode" = "ForwardBase"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_0*"}
 
             Stencil
             {
@@ -49,7 +49,6 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma lil_multi_compile_forward
-            #pragma lil_skip_variants_shadows
 
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
@@ -60,6 +59,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -67,7 +67,7 @@
         Pass
         {
             Name "FORWARD_FUR"
-            Tags {"LightMode" = "ForwardBase"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_1*"}
 
             Stencil
             {
@@ -97,7 +97,6 @@
             #pragma geometry geom
             #pragma fragment frag
             #pragma lil_multi_compile_forward
-            #pragma lil_skip_variants_shadows
 
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
@@ -108,6 +107,7 @@
 
             #include "Includes/lil_pass_forward_fur.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -131,9 +131,9 @@
                 Fail [_StencilFail]
                 ZFail [_StencilZFail]
             }
-		    Cull [_Cull]
+            Cull [_Cull]
             ZClip [_ZClip]
-			ZWrite Off
+            ZWrite Off
             ZTest LEqual
             ColorMask [_ColorMask]
             Offset [_OffsetFactor], [_OffsetUnits]
@@ -158,6 +158,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -177,9 +178,9 @@
                 Fail [_FurStencilFail]
                 ZFail [_FurStencilZFail]
             }
-		    Cull [_FurCull]
+            Cull [_FurCull]
             ZClip [_FurZClip]
-			ZWrite Off
+            ZWrite Off
             ZTest LEqual
             ColorMask [_FurColorMask]
             Offset [_FurOffsetFactor], [_FurOffsetUnits]
@@ -205,6 +206,7 @@
 
             #include "Includes/lil_pass_forward_fur.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -217,7 +219,7 @@
             Name "SHADOW_CASTER"
             Tags {"LightMode" = "ShadowCaster"}
             Offset 1, 1
-		    Cull [_Cull]
+            Cull [_Cull]
 
             HLSLPROGRAM
 
@@ -236,6 +238,7 @@
 
             #include "Includes/lil_pass_shadowcaster.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -262,6 +265,8 @@
             *LIL_SUBSHADER_INSERT*
 
             #include "Includes/lil_pass_meta.hlsl"
+
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 

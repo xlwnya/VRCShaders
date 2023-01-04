@@ -12,12 +12,13 @@
 //#pragma warning(default: 4700 4701 4702 4703 4704 4705 4706 4707 4708 4710 4711 4712 4713 4714 4715 4716 4717)
 //#pragma warning(disable: 3571)
 
-// Ignore unknown pragma (for old Unity version)
+// Ignore warning
+#pragma warning(disable: 3033 4001 4008 4009 4010 4116 4117)
 #pragma warning(disable: 3568)
 
 //------------------------------------------------------------------------------------------------------------------------------
 // Common
-#if defined(LIL_CUSTOM_SHADER) || defined(LIL_LITE) || defined(LIL_MULTI) || defined(LIL_IGNORE_SHADERSETTING)
+#if defined(LIL_LITE) || defined(LIL_MULTI) || defined(LIL_IGNORE_SHADERSETTING)
     #define LIL_OPTIMIZE_APPLY_SHADOW_FA
 #endif
 #include "lil_common_macro.hlsl"
@@ -43,8 +44,6 @@
     #define _UseParallax true
     #define _UseAudioLink true
     #define _AudioLinkAsLocal true
-    #undef LIL_BRANCH
-    #define LIL_BRANCH
     #define LIL_MULTI_SHOULD_CLIPPING && _UseClippingCanceller
 #else
     #define LIL_MULTI_SHOULD_CLIPPING
@@ -78,6 +77,8 @@ struct lilFragData
     float2 uvRim;
     float2 uvPanorama;
     float2 uvScn;
+    float2 ddxMain;
+    float2 ddyMain;
     bool isRightHand;
 
     // Position
@@ -88,6 +89,10 @@ struct lilFragData
     float depth;
 
     // Vector
+    float3 cameraFront;
+    float3 cameraUp;
+    float3 cameraRight;
+    float3x3 cameraMatrix;
     float3x3 TBN;
     float3 T;
     float3 B;
@@ -149,6 +154,8 @@ lilFragData lilInitFragData()
     fd.uvRim = 0.0;
     fd.uvPanorama = 0.0;
     fd.uvScn = 0.0;
+    fd.ddxMain = 0.0;
+    fd.ddyMain = 0.0;
     fd.isRightHand = true;
 
     fd.positionOS = 0.0;
@@ -157,6 +164,10 @@ lilFragData lilInitFragData()
     fd.positionSS = 0.0;
     fd.depth = 0.0;
 
+    fd.cameraFront = lilCameraDirection();
+    fd.cameraUp = lilCameraUp();
+    fd.cameraRight = lilCameraRight();
+    fd.cameraMatrix = float3x3(fd.cameraRight, fd.cameraUp, fd.cameraFront);
     fd.TBN = float3x3(
         1.0,0.0,0.0,
         0.0,1.0,0.0,

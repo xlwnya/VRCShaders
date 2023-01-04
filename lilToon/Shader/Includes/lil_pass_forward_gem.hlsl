@@ -51,10 +51,10 @@
         float4 positionCS   : SV_POSITION;
         float4 uv01         : TEXCOORD0;
         float4 uv23         : TEXCOORD1;
-        float3 normalWS     : TEXCOORD2;
-        float3 positionWS   : TEXCOORD3;
+        float3 positionWS   : TEXCOORD2;
+        LIL_VECTOR_INTERPOLATION float3 normalWS     : TEXCOORD3;
         #if defined(LIL_V2F_TANGENT_WS)
-            float4 tangentWS    : TEXCOORD4;
+            LIL_VECTOR_INTERPOLATION float4 tangentWS    : TEXCOORD4;
         #endif
         #if defined(LIL_V2F_POSITION_OS)
             float3 positionOS   : TEXCOORD5;
@@ -103,6 +103,9 @@
         OVERRIDE_UNPACK_V2F
         LIL_COPY_VFACE(fd.facing);
         LIL_GET_HDRPDATA(input,fd);
+        #if defined(LIL_V2F_SHADOW) || defined(LIL_PASS_FORWARDADD)
+            LIL_LIGHT_ATTENUATION(fd.attenuation, input);
+        #endif
         LIL_GET_LIGHTING_DATA(input,fd);
 
         //------------------------------------------------------------------------------------------------------------------------------
@@ -121,14 +124,12 @@
         // UV
         BEFORE_ANIMATE_MAIN_UV
         OVERRIDE_ANIMATE_MAIN_UV
+        BEFORE_CALC_DDX_DDY
+        OVERRIDE_CALC_DDX_DDY
 
         //------------------------------------------------------------------------------------------------------------------------------
         // Gem View Direction
-        #if defined(USING_STEREO_MATRICES)
-            float3 gemViewDirection = lerp(fd.headV, fd.V, _GemVRParallaxStrength);
-        #else
-            float3 gemViewDirection = fd.V;
-        #endif
+        float3 gemViewDirection = lilBlendVRParallax(fd.headV, fd.V, _GemVRParallaxStrength);
 
         //------------------------------------------------------------------------------------------------------------------------------
         // Main Color
@@ -161,7 +162,7 @@
             fd.N = normalize(fd.N);
         #endif
         fd.origN = normalize(input.normalWS);
-        fd.uvMat = mul((float3x3)LIL_MATRIX_V, fd.N).xy * 0.5 + 0.5;
+        fd.uvMat = mul(fd.cameraMatrix, fd.N).xy * 0.5 + 0.5;
         fd.reflectionN = fd.N;
         fd.matcapN = fd.N;
         fd.matcap2ndN = fd.N;
@@ -183,7 +184,7 @@
         #endif
 
         //------------------------------------------------------------------------------------------------------------------------------
-        // AudioLink (https://github.com/llealloo/vrc-udon-audio-link)
+        // AudioLink
         BEFORE_AUDIOLINK
         #if defined(LIL_FEATURE_AUDIOLINK)
             OVERRIDE_AUDIOLINK
@@ -217,7 +218,9 @@
         //------------------------------------------------------------------------------------------------------------------------------
         // Reflection
         fd.smoothness = _Smoothness;
-        if(Exists_SmoothnessTex) fd.smoothness *= LIL_SAMPLE_2D(_SmoothnessTex, sampler_MainTex, fd.uvMain).r;
+        #if defined(LIL_FEATURE_SmoothnessTex)
+            fd.smoothness *= LIL_SAMPLE_2D(_SmoothnessTex, sampler_MainTex, fd.uvMain).r;
+        #endif
         fd.perceptualRoughness = fd.perceptualRoughness - fd.smoothness * fd.perceptualRoughness;
         fd.roughness = fd.perceptualRoughness * fd.perceptualRoughness;
 

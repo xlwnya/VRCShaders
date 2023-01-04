@@ -10,7 +10,6 @@
             #pragma lil_skip_variants_addlightshadows
             #pragma lil_skip_variants_probevolumes
             #pragma lil_skip_variants_ao
-            #pragma lil_skip_variants_lightlists
             #pragma lil_skip_variants_reflections
         ENDHLSL
 
@@ -20,27 +19,27 @@
         Pass
         {
             Name "FORWARD_BACK"
-            Tags {"LightMode" = "ForwardBase"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_0*"}
 
             Stencil
             {
-                Ref [_StencilRef]
-                ReadMask [_StencilReadMask]
-                WriteMask [_StencilWriteMask]
-                Comp [_StencilComp]
-                Pass [_StencilPass]
-                Fail [_StencilFail]
-                ZFail [_StencilZFail]
+                Ref [_PreStencilRef]
+                ReadMask [_PreStencilReadMask]
+                WriteMask [_PreStencilWriteMask]
+                Comp [_PreStencilComp]
+                Pass [_PreStencilPass]
+                Fail [_PreStencilFail]
+                ZFail [_PreStencilZFail]
             }
-            Cull Front
-            ZClip [_ZClip]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
-            ColorMask [_ColorMask]
-            Offset [_OffsetFactor], [_OffsetUnits]
-            BlendOp [_BlendOp], [_BlendOpAlpha]
-            Blend [_SrcBlend] [_DstBlend], [_SrcBlendAlpha] [_DstBlendAlpha]
-            AlphaToMask [_AlphaToMask]
+            Cull [_PreCull]
+            ZClip [_PreZClip]
+            ZWrite [_PreZWrite]
+            ZTest [_PreZTest]
+            ColorMask [_PreColorMask]
+            Offset [_PreOffsetFactor], [_PreOffsetUnits]
+            BlendOp [_PreBlendOp], [_PreBlendOpAlpha]
+            Blend [_PreSrcBlend] [_PreDstBlend], [_PreSrcBlendAlpha] [_PreDstBlendAlpha]
+            AlphaToMask [_PreAlphaToMask]
 
             HLSLPROGRAM
 
@@ -52,6 +51,7 @@
 
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
+            #define LIL_TRANSPARENT_PRE
             #include "Includes/lil_pipeline_brp.hlsl"
             #include "Includes/lil_common.hlsl"
             // Insert functions and includes that depend on Unity here
@@ -59,6 +59,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -66,7 +67,7 @@
         Pass
         {
             Name "FORWARD"
-            Tags {"LightMode" = "ForwardBase"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_1*"}
 
             Stencil
             {
@@ -105,6 +106,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -112,7 +114,7 @@
         Pass
         {
             Name "FORWARD_OUTLINE"
-            Tags {"LightMode" = "ForwardBase"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_2*"}
 
             Stencil
             {
@@ -152,6 +154,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -175,9 +178,9 @@
                 Fail [_StencilFail]
                 ZFail [_StencilZFail]
             }
-		    Cull [_Cull]
+            Cull [_Cull]
             ZClip [_ZClip]
-			ZWrite Off
+            ZWrite Off
             ZTest LEqual
             ColorMask [_ColorMask]
             Offset [_OffsetFactor], [_OffsetUnits]
@@ -202,6 +205,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -223,7 +227,7 @@
             }
             Cull [_OutlineCull]
             ZClip [_OutlineZClip]
-			ZWrite Off
+            ZWrite Off
             ZTest LEqual
             ColorMask [_OutlineColorMask]
             Offset [_OutlineOffsetFactor], [_OutlineOffsetUnits]
@@ -249,6 +253,7 @@
 
             #include "Includes/lil_pass_forward.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -261,7 +266,7 @@
             Name "SHADOW_CASTER"
             Tags {"LightMode" = "ShadowCaster"}
             Offset 1, 1
-		    Cull [_Cull]
+            Cull [_Cull]
 
             HLSLPROGRAM
 
@@ -280,6 +285,7 @@
 
             #include "Includes/lil_pass_shadowcaster.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -289,7 +295,7 @@
             Name "SHADOW_CASTER_OUTLINE"
             Tags {"LightMode" = "ShadowCaster"}
             Offset 1, 1
-		    Cull [_Cull]
+            Cull [_Cull]
 
             HLSLPROGRAM
 
@@ -309,6 +315,7 @@
 
             #include "Includes/lil_pass_shadowcaster.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -336,8 +343,10 @@
 
             #include "Includes/lil_pass_meta.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
         *LIL_INSERT_PASS_POST*
     }
+    Fallback "Unlit/Texture"

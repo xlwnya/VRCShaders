@@ -3,10 +3,6 @@ using UnityEditor;
 using UnityEngine;
 using System;
 
-#if !UNITY_2018_1_OR_NEWER
-    using System.Reflection;
-#endif
-
 namespace lilToon
 {
     //------------------------------------------------------------------------------------------------------------------------------
@@ -23,11 +19,7 @@ namespace lilToon
                 Color value = prop.colorValue;
                 EditorGUI.BeginChangeCheck();
                 EditorGUI.showMixedValue = prop.hasMixedValue;
-                #if UNITY_2018_1_OR_NEWER
-                    value = EditorGUI.ColorField(position, new GUIContent(label), value, true, true, true);
-                #else
-                    value = EditorGUI.ColorField(position, new GUIContent(label), value, true, true, true, null);
-                #endif
+                value = EditorGUI.ColorField(position, new GUIContent(label), value, true, true, true);
                 EditorGUI.showMixedValue = false;
 
                 if(EditorGUI.EndChangeCheck())
@@ -70,11 +62,7 @@ namespace lilToon
                 Color value = prop.colorValue;
                 EditorGUI.BeginChangeCheck();
                 EditorGUI.showMixedValue = prop.hasMixedValue;
-                #if UNITY_2018_1_OR_NEWER
-                    value = EditorGUI.ColorField(position, new GUIContent(label), value, true, true, true);
-                #else
-                    value = EditorGUI.ColorField(position, new GUIContent(label), value, true, true, true, null);
-                #endif
+                value = EditorGUI.ColorField(position, new GUIContent(label), value, true, true, true);
                 EditorGUI.showMixedValue = false;
 
                 if(EditorGUI.EndChangeCheck())
@@ -140,7 +128,7 @@ namespace lilToon
         public override void OnGUI(Rect position, MaterialProperty prop, string label, MaterialEditor editor)
         {
             // Radian -> Degree
-            float angle180 = prop.floatValue / Mathf.PI * 180.0f;
+            float angle180 = lilEditorGUI.Radian2Degree(prop.floatValue);
 
             EditorGUI.BeginChangeCheck();
             EditorGUI.showMixedValue = prop.hasMixedValue;
@@ -150,7 +138,26 @@ namespace lilToon
             if(EditorGUI.EndChangeCheck())
             {
                 // Degree -> Radian
-                prop.floatValue = angle180 * Mathf.PI / 180.0f;
+                prop.floatValue = lilEditorGUI.Degree2Radian(angle180);
+            }
+        }
+    }
+
+    public class lilLODDrawer : MaterialPropertyDrawer
+    {
+        // [lilLOD]
+        public override void OnGUI(Rect position, MaterialProperty prop, string label, MaterialEditor editor)
+        {
+            float val = lilEditorGUI.RoundFloat1000000(Mathf.Pow(prop.floatValue, 0.25f));
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+            val = EditorGUI.Slider(position, label, val, 0.0f, 1.0f);
+            EditorGUI.showMixedValue = false;
+
+            if(EditorGUI.EndChangeCheck())
+            {
+                prop.floatValue = Mathf.Pow(val, 4.0f);
             }
         }
     }
@@ -203,6 +210,30 @@ namespace lilToon
             if(EditorGUI.EndChangeCheck())
             {
                 prop.vectorValue = new Vector4(x, y, prop.vectorValue.z, prop.vectorValue.w);
+            }
+        }
+    }
+
+    public class lilVec2Drawer : MaterialPropertyDrawer
+    {
+        // Draw vector4 as vector2
+        // [lilVec2]
+        public override void OnGUI(Rect position, MaterialProperty prop, string label, MaterialEditor editor)
+        {
+            Vector2 vec = new Vector2(prop.vectorValue.x, prop.vectorValue.y);
+            float unused0 = prop.vectorValue.z;
+            float unused1 = prop.vectorValue.w;
+
+            EditorGUIUtility.wideMode = true;
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+            vec = EditorGUI.Vector2Field(position, label, vec);
+            EditorGUI.showMixedValue = false;
+
+            if(EditorGUI.EndChangeCheck())
+            {
+                prop.vectorValue = new Vector4(vec.x, vec.y, unused0, unused1);
             }
         }
     }
@@ -288,8 +319,8 @@ namespace lilToon
         {
             string[] labels = label.Split('|');
             Vector2 scroll = new Vector2(prop.vectorValue.x, prop.vectorValue.y);
-            float angle = prop.vectorValue.z / Mathf.PI * 180.0f;
-            float rotate = prop.vectorValue.w / Mathf.PI * 0.5f;
+            float angle = lilEditorGUI.Radian2Degree(prop.vectorValue.z);
+            float rotate = lilEditorGUI.RoundFloat1000000(prop.vectorValue.w / Mathf.PI * 0.5f);
 
             EditorGUI.BeginChangeCheck();
 
@@ -309,7 +340,7 @@ namespace lilToon
                 // Angle
                 angle = EditorGUI.Slider(position, labels[0], angle, -180.0f, 180.0f);
 
-                lilToonInspector.DrawLine();
+                lilEditorGUI.DrawLine();
 
                 // Heading (UV Animation)
                 EditorGUILayout.LabelField(labels[1], EditorStyles.boldLabel);
@@ -338,7 +369,7 @@ namespace lilToon
 
             if(EditorGUI.EndChangeCheck())
             {
-                prop.vectorValue = new Vector4(scroll.x, scroll.y, angle * Mathf.PI / 180.0f, rotate * Mathf.PI * 2.0f);
+                prop.vectorValue = new Vector4(scroll.x, scroll.y, lilEditorGUI.Degree2Radian(angle), rotate * Mathf.PI * 2.0f);
             }
         }
     }
@@ -569,7 +600,7 @@ namespace lilToon
             float param1 = prop.vectorValue.x;
             float param2 = prop.vectorValue.y;
             float param3 = prop.vectorValue.z;
-            bool param4 = (prop.vectorValue.w != 0.0f);
+            bool param4 = prop.vectorValue.w != 0.0f;
 
             Rect position1 = EditorGUILayout.GetControlRect();
             Rect position2 = EditorGUILayout.GetControlRect();
@@ -653,7 +684,7 @@ namespace lilToon
             string[] labels = label.Split('|');
             float scale = prop.vectorValue.x;
             float offset = prop.vectorValue.y;
-            float angle180 = prop.vectorValue.z / Mathf.PI * 180.0f;
+            float angle180 = lilEditorGUI.Radian2Degree(prop.vectorValue.z);
             float band = (prop.vectorValue.w - 0.125f) * 4.0f;
 
             EditorGUI.BeginChangeCheck();
@@ -684,7 +715,7 @@ namespace lilToon
 
             if(EditorGUI.EndChangeCheck())
             {
-                prop.vectorValue = new Vector4(scale, offset, angle180 * Mathf.PI / 180.0f, (band / 4.0f) + 0.125f);
+                prop.vectorValue = new Vector4(scale, offset, lilEditorGUI.Degree2Radian(angle180), (band / 4.0f) + 0.125f);
             }
         }
     }

@@ -7,11 +7,11 @@
             #pragma fragmentoption ARB_precision_hint_fastest
             #define LIL_GEM
 
+            #pragma lil_skip_variants_shadows
             #pragma lil_skip_variants_decals
             #pragma lil_skip_variants_addlightshadows
             #pragma lil_skip_variants_probevolumes
             #pragma lil_skip_variants_ao
-            #pragma lil_skip_variants_lightlists
         ENDHLSL
 
         GrabPass {"_lilBackgroundTexture"}
@@ -53,6 +53,8 @@
             *LIL_SUBSHADER_INSERT*
 
             #include "Includes/lil_pass_forward_gem.hlsl"
+
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -60,7 +62,7 @@
         Pass
         {
             Name "FORWARD"
-            Tags {"LightMode" = "ForwardBase"}
+            Tags {"LightMode" = "*LIL_LIGHTMODE_FORWARD_1*"}
 
             Stencil
             {
@@ -89,7 +91,6 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma lil_multi_compile_forward
-            #pragma lil_skip_variants_shadows
 
             //----------------------------------------------------------------------------------------------------------------------
             // Pass
@@ -99,6 +100,8 @@
             *LIL_SUBSHADER_INSERT*
 
             #include "Includes/lil_pass_forward_gem.hlsl"
+
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -108,7 +111,7 @@
             Name "SHADOW_CASTER"
             Tags {"LightMode" = "ShadowCaster"}
             Offset 1, 1
-		    Cull [_Cull]
+            Cull [_Cull]
 
             HLSLPROGRAM
 
@@ -127,6 +130,7 @@
 
             #include "Includes/lil_pass_shadowcaster.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 
@@ -154,6 +158,7 @@
 
             #include "Includes/lil_pass_meta.hlsl"
 
+            *LIL_SUBSHADER_INSERT_POST*
             ENDHLSL
         }
 

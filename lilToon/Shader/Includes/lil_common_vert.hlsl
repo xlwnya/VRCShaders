@@ -63,15 +63,22 @@ LIL_V2F_TYPE vert(appdata input)
 
     //------------------------------------------------------------------------------------------------------------------------------
     // Invisible
-    #if defined(LIL_TESSELLATION)
-        LIL_BRANCH
-        if(!_Invisible)
+    #if defined(LIL_OUTLINE) && !defined(LIL_LITE) && defined(USING_STEREO_MATRICES)
+        #define LIL_VERTEX_CONDITION (_Invisible || _OutlineDisableInVR)
+    #elif defined(LIL_OUTLINE) && !defined(LIL_LITE)
+        #define LIL_VERTEX_CONDITION (_Invisible || _OutlineDisableInVR && (abs(UNITY_MATRIX_P._m02) > 0.000001))
+    #else
+        #define LIL_VERTEX_CONDITION (_Invisible)
+    #endif
+
+    #if defined(LIL_TESSELLATION) || defined(LIL_CUSTOM_SAFEVERT)
+        if(!LIL_VERTEX_CONDITION)
         {
     #else
-        // In the tessellation shader this gives a warning
-        LIL_BRANCH
-        if(_Invisible) return LIL_V2F_OUT;
+        if(LIL_VERTEX_CONDITION) return LIL_V2F_OUT;
     #endif
+
+    #undef LIL_VERTEX_CONDITION
 
     //------------------------------------------------------------------------------------------------------------------------------
     // Single Pass Instanced rendering
@@ -82,6 +89,7 @@ LIL_V2F_TYPE vert(appdata input)
     //------------------------------------------------------------------------------------------------------------------------------
     // UV
     float2 uvMain = lilCalcUV(input.uv0, _MainTex_ST);
+    float2 uvs[4] = {uvMain,input.uv1,input.uv2,input.uv3};
 
     //------------------------------------------------------------------------------------------------------------------------------
     // Object space direction
@@ -232,7 +240,7 @@ LIL_V2F_TYPE vert(appdata input)
     // Fog & Lighting
     lilFragData fd = lilInitFragData();
     LIL_GET_HDRPDATA(vertexInput,fd);
-    #if defined(LIL_V2F_LIGHTCOLOR) || defined(LIL_V2F_LIGHTDIRECTION) || defined(LIL_V2F_INDLIGHTCOLOR)
+    #if defined(LIL_V2F_LIGHTCOLOR) || defined(LIL_V2F_LIGHTDIRECTION) || defined(LIL_V2F_INDLIGHTCOLOR) || defined(LIL_V2F_NDOTL)
         LIL_CALC_MAINLIGHT(vertexInput, lightdataInput);
     #endif
     #if defined(LIL_V2F_LIGHTCOLOR)
@@ -243,6 +251,15 @@ LIL_V2F_TYPE vert(appdata input)
     #endif
     #if defined(LIL_V2F_INDLIGHTCOLOR)
         LIL_V2F_OUT_BASE.indLightColor  = lightdataInput.indLightColor * _ShadowEnvStrength;
+    #endif
+    #if defined(LIL_V2F_NDOTL)
+        float2 outlineNormalVS = normalize(lilTransformDirWStoVSCenter(vertexNormalInput.normalWS).xy);
+        #if defined(LIL_PASS_FORWARDADD)
+            float2 outlineLightVS = normalize(lilTransformDirWStoVSCenter(normalize(_WorldSpaceLightPos0.xyz - vertexInput.positionWS * _WorldSpaceLightPos0.w)).xy);
+        #else
+            float2 outlineLightVS = normalize(lilTransformDirWStoVSCenter(lightdataInput.lightDirection).xy);
+        #endif
+        LIL_V2F_OUT_BASE.NdotL          = dot(outlineNormalVS, outlineLightVS) * 0.5 + 0.5;
     #endif
     #if defined(LIL_V2F_SHADOW)
         LIL_TRANSFER_SHADOW(vertexInput, input.uv1, LIL_V2F_OUT_BASE);
@@ -325,13 +342,22 @@ LIL_V2F_TYPE vert(appdata input)
         #endif
     #endif
 
-    #if defined(LIL_TESSELLATION)
+    //------------------------------------------------------------------------------------------------------------------------------
+    // Remove Outline
+    #if defined(LIL_ONEPASS_OUTLINE)
+        float width = lilGetOutlineWidth(uvMain, input.color, _OutlineWidth, _OutlineWidthMask, _OutlineVertexR2Width LIL_SAMP_IN(sampler_linear_repeat));
+        if(width > -0.000001 && width < 0.000001 && _OutlineDeleteMesh) LIL_V2F_OUT.positionCSOL = 0.0/0.0;
+    #elif defined(LIL_OUTLINE)
+        float width = lilGetOutlineWidth(uvMain, input.color, _OutlineWidth, _OutlineWidthMask, _OutlineVertexR2Width LIL_SAMP_IN(sampler_linear_repeat));
+        if(width > -0.000001 && width < 0.000001 && _OutlineDeleteMesh) LIL_V2F_OUT.positionCS = 0.0/0.0;
+    #endif
+
+    #if defined(LIL_TESSELLATION) || defined(LIL_CUSTOM_SAFEVERT)
         }
     #endif
 
     return LIL_V2F_OUT;
 }
-
 
 //------------------------------------------------------------------------------------------------------------------------------
 // Geometry shader (for HDRP)
@@ -341,7 +367,6 @@ LIL_V2F_TYPE vert(appdata input)
     {
         //------------------------------------------------------------------------------------------------------------------------------
         // Invisible
-        LIL_BRANCH
         if(_Invisible) return;
 
         v2f output[3];
@@ -360,7 +385,6 @@ LIL_V2F_TYPE vert(appdata input)
         }
 
         // Front
-        LIL_BRANCH
         if(_Cull != 1)
         {
             outStream.Append(output[0]);
@@ -370,7 +394,6 @@ LIL_V2F_TYPE vert(appdata input)
         }
 
         // Back
-        LIL_BRANCH
         if(_Cull != 2)
         {
             outStream.Append(output[2]);
@@ -390,7 +413,6 @@ LIL_V2F_TYPE vert(appdata input)
         }
 
         // Front
-        LIL_BRANCH
         if(_OutlineCull != 1)
         {
             outStream.Append(output[0]);
@@ -400,7 +422,6 @@ LIL_V2F_TYPE vert(appdata input)
         }
 
         // Back
-        LIL_BRANCH
         if(_OutlineCull != 2)
         {
             outStream.Append(output[2]);
