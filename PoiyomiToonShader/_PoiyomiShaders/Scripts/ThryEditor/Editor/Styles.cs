@@ -33,6 +33,7 @@ namespace Thry
         public static Color COLOR_BACKGROUND_2 = EditorGUIUtility.isProSkin ? new Color(0.5f, 0.5f, 0.5f) : new Color(0.85f, 0.85f, 0.85f);
 
         public static GUIStyle dropDownHeaderLabel { get; private set; } = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter };
+        public static GUIStyle label_align_right { get; private set; } = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.UpperRight };
         public static GUIStyle dropDownHeaderButton { get; private set; } = new GUIStyle(EditorStyles.toolbarButton);
         public static GUIStyle bigTextureStyle { get; private set; } = new GUIStyle() { fontSize = 48 };
         public static GUIStyle vectorPropertyStyle { get; private set; } = new GUIStyle() { padding = new RectOffset(0, 0, 2, 2) };
@@ -45,8 +46,10 @@ namespace Thry
         public static GUIStyle notification_style { get; private set; } = new GUIStyle(GUI.skin.box) { fontSize = 12, wordWrap = true, normal = new GUIStyleState() { textColor = Color.red } };
 
         public static GUIStyle style_toggle_left_richtext { get; private set; } = new GUIStyle(EditorStyles.label) { richText = true };
+        public static GUIStyle richtext { get; private set; } = new GUIStyle(EditorStyles.label) { richText = true, wordWrap = true };
+        public static GUIStyle richtext_center { get; private set; } = new GUIStyle(EditorStyles.label) { richText = true, wordWrap = true, alignment = TextAnchor.MiddleCenter };
 
-        public static GUIStyle icon_style_help = CreateIconStyle(EditorGUIUtility.IconContent("_Help"));
+        public static GUIStyle icon_style_help = CreateIconStyle(EditorGUIUtility.IconContent("PolygonCollider2D Icon"));
         public static GUIStyle icon_style_menu = CreateIconStyle(EditorGUIUtility.IconContent("_Menu"));
         public static GUIStyle icon_style_settings = CreateIconStyle(EditorGUIUtility.IconContent("_Popup"));
         public static GUIStyle icon_style_search = CreateIconStyle(EditorGUIUtility.IconContent("Search Icon"));
@@ -55,6 +58,7 @@ namespace Thry
         public static GUIStyle icon_style_remove = CreateIconStyle(EditorGUIUtility.IconContent("PrefabOverlayRemoved Icon"));
         public static GUIStyle icon_style_refresh = CreateIconStyle(EditorGUIUtility.IconContent("d_Refresh"));
         public static GUIStyle icon_style_shaders = CreateIconStyle(EditorGUIUtility.IconContent("d_ShaderVariantCollection Icon"));
+        public static GUIStyle icon_style_tools = CreateIconStyle(EditorGUIUtility.IconContent("d_SceneViewTools"));
         public static GUIStyle icon_style_linked = CreateIconStyle(LoadTextureByFileName(RESOURCE_NAME.ICON_NAME_LINK));
         public static GUIStyle icon_style_thryIcon = CreateIconStyle(LoadTextureByFileName(RESOURCE_NAME.ICON_NAME_THRY));
 

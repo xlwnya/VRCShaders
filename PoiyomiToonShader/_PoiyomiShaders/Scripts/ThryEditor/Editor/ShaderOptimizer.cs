@@ -47,7 +47,6 @@ using static VRC.SDK3.Avatars.Components.VRCAvatarDescriptor;
 using VRC.SDK3.Avatars.Components;
 using System.Reflection;
 #endif
-// v9
 
 namespace Thry
 {
@@ -341,6 +340,11 @@ namespace Thry
             return m.GetTag(prop + AnimatedTagSuffix, false, "");
         }
 
+        public static bool IsAnimated(Material m, string prop)
+        {
+            return m.GetTag(prop + AnimatedTagSuffix, false, "0") != "0";
+        }
+
         public static string GetRenamedPropertySuffix(Material m)
         {
             string cleanedMaterialName = Regex.Replace(m.name.Trim(), @"[^0-9a-zA-Z_]+", string.Empty);
@@ -371,6 +375,7 @@ namespace Thry
             string materialFolder = Path.GetDirectoryName(materialFilePath);
             string guid = AssetDatabase.AssetPathToGUID(materialFilePath);
             string newShaderName = "Hidden/Locked/" + shader.name + "/" + guid;
+            string shaderOptimizerButtonDrawerName = $"[{nameof(ThryShaderOptimizerLockButtonDrawer).Replace("Drawer", "")}]";
             //string newShaderDirectory = materialFolder + "/OptimizedShaders/" + material.name + "-" + smallguid + "/";
             string newShaderDirectory = materialFolder + "/OptimizedShaders/" + material.name + "/";
 
@@ -379,62 +384,31 @@ namespace Thry
 
             // Get collection of all properties to replace
             // Simultaneously build a string of #defines for each CGPROGRAM
-            StringBuilder definesSB = new StringBuilder();
+            List<(string name,string value)> defines = new List<(string,string)>();
             // Append convention OPTIMIZER_ENABLED keyword
-            definesSB.Append(Environment.NewLine);
-            definesSB.Append("#define ");
-            definesSB.Append(OptimizerEnabledKeyword);
-            definesSB.Append(Environment.NewLine);
+            defines.Add((OptimizerEnabledKeyword,""));
             // Append all keywords active on the material
             foreach (string keyword in material.shaderKeywords)
             {
                 if (keyword == "") continue; // idk why but null keywords exist if _ keyword is used and not removed by the editor at some point
-                definesSB.Append("#define ");
-                definesSB.Append(keyword);
-                definesSB.Append(Environment.NewLine);
+                defines.Add((keyword,""));
             }
 
             KeywordsUsedByPragmas.Clear();
 
-            Dictionary<string,bool> removeBetweenKeywords = new Dictionary<string,bool>();
             List<PropertyData> constantProps = new List<PropertyData>();
             List<RenamingProperty> animatedPropsToRename = new List<RenamingProperty>();
             List<RenamingProperty> animatedPropsToDuplicate = new List<RenamingProperty>();
             foreach (MaterialProperty prop in props)
             {
                 if (prop == null) continue;
-
-                if (prop.name.Contains("_commentIf"))
-                {
-                    if (Regex.IsMatch(prop.name, @".*_commentIfOne_(\d|\w)+") && prop.floatValue == 1)
-                    {
-                        string key = Regex.Match(prop.name, @"_commentIfOne_(\d|\w)+").Value.Replace("_commentIfOne_", "");
-                        removeBetweenKeywords.Add(key, false);
-                    }
-                    if (Regex.IsMatch(prop.name, @".*_commentIfZero_(\d|\w)+") && prop.floatValue == 0)
-                    {
-                        string key = Regex.Match(prop.name, @"_commentIfZero_(\d|\w)+").Value.Replace("_commentIfZero_", "");
-                        removeBetweenKeywords.Add(key, false);
-                    }
-                }
-
                 // Every property gets turned into a preprocessor variable
                 switch (prop.type)
                 {
-                    case MaterialProperty.PropType.Float:
-                    case MaterialProperty.PropType.Range:
-                        definesSB.Append("#define PROP");
-                        definesSB.Append(prop.name.ToUpperInvariant());
-                        definesSB.Append(' ');
-                        definesSB.Append(prop.floatValue.ToString(CultureInfo.InvariantCulture));
-                        definesSB.Append(Environment.NewLine);
-                        break;
                     case MaterialProperty.PropType.Texture:
                         if (prop.textureValue != null)
                         {
-                            definesSB.Append("#define PROP");
-                            definesSB.Append(prop.name.ToUpperInvariant());
-                            definesSB.Append(Environment.NewLine);
+                            defines.Add(($"PROP{prop.name.ToUpperInvariant()}", ""));
                         }
                         break;
                 }
@@ -513,6 +487,7 @@ namespace Thry
                         else if ((prop.flags & MaterialProperty.PropFlags.Gamma) != 0)
                             propData.value = prop.colorValue;
                         else propData.value = prop.colorValue.linear;
+                        if (PlayerSettings.colorSpace == ColorSpace.Gamma) propData.value = prop.colorValue;
                         constantProps.Add(propData);
                         break;
                     case MaterialProperty.PropType.Vector:
@@ -550,7 +525,6 @@ namespace Thry
                         break;
                 }
             }
-            string optimizerDefines = definesSB.ToString();
 
             // Get list of lightmode passes to delete
             List<string> disabledLightModes = new List<string>();
@@ -567,8 +541,20 @@ namespace Thry
             // Parse shader and cginc files, also gets preprocessor macros
             List<ParsedShaderFile> shaderFiles = new List<ParsedShaderFile>();
             List<Macro> macros = new List<Macro>();
-            if (!ParseShaderFilesRecursive(shaderFiles, newShaderDirectory, shaderFilePath, macros, material, removeBetweenKeywords))
+            if (!ParseShaderFilesRecursive(shaderFiles, newShaderDirectory, shaderFilePath, macros, material))
                 return false;
+
+            // Remove all defines where name if not in shader files
+            List<(string,string)> definesToRemove = new List<(string,string)>();
+            foreach((string name,string) def in defines)
+            {
+                if (shaderFiles.All(x => x.lines.Any(l => l.Contains(def.name)) == false))
+                    definesToRemove.Add(def);
+            }
+            defines.RemoveAll(x => definesToRemove.Contains(x));
+            string optimizerDefines = "";
+            if(defines.Count > 0)
+                optimizerDefines = defines.Select(m => $"\n #define {m.name} {m.value}").Aggregate((s1, s2) => s1 + s2);
 
             int commentKeywords = 0;
 
@@ -620,6 +606,9 @@ namespace Thry
                         {
                             string originalSgaderName = psf.lines[i].Split('\"')[1];
                             psf.lines[i] = psf.lines[i].Replace(originalSgaderName, newShaderName);
+                        }else if (trimmedLine.StartsWith(shaderOptimizerButtonDrawerName))
+                        {
+                            psf.lines[i] = Regex.Replace(psf.lines[i], @"\d+\w*$", "1");
                         }
                         else if (trimmedLine.StartsWith("//#pragmamulti_compile_LOD_FADE_CROSSFADE", StringComparison.Ordinal))
                         {
@@ -737,7 +726,7 @@ namespace Thry
                 }
                 catch (IOException e)
                 {
-                    Debug.LogError("[Kaj Shader Optimizer] Processed shader file " + newShaderDirectory + fileName + " could not be written.  " + e.ToString());
+                    Debug.LogError("[Shader Optimizer] Processed shader file " + newShaderDirectory + fileName + " could not be written.  " + e.ToString());
                     return false;
                 }
             }
@@ -811,7 +800,7 @@ namespace Thry
             Shader newShader = Shader.Find(newShaderName);
             if (newShader == null)
             {
-                Debug.LogError("[Kaj Shader Optimizer] Generated shader " + newShaderName + " could not be found");
+                Debug.LogError("[Shader Optimizer] Generated shader " + newShaderName + " could not be found");
                 return false;
             }
             material.shader = newShader;
@@ -907,7 +896,7 @@ namespace Thry
         // Save each file as string[], parse each macro with //KSOEvaluateMacro
         // Only editing done is replacing #include "X" filepaths where necessary
         // most of these args could be private static members of the class
-        private static bool ParseShaderFilesRecursive(List<ParsedShaderFile> filesParsed, string newTopLevelDirectory, string filePath, List<Macro> macros, Material material, Dictionary<string,bool> removeBetweenKeywords)
+        private static bool ParseShaderFilesRecursive(List<ParsedShaderFile> filesParsed, string newTopLevelDirectory, string filePath, List<Macro> macros, Material material)
         {
             // Infinite recursion check
             if (filesParsed.Exists(x => x.filePath == filePath)) return true;
@@ -926,12 +915,12 @@ namespace Thry
             }
             catch (FileNotFoundException e)
             {
-                Debug.LogError("[Kaj Shader Optimizer] Shader file " + filePath + " not found.  " + e.ToString());
+                Debug.LogError("[Shader Optimizer] Shader file " + filePath + " not found.  " + e.ToString());
                 return false;
             }
             catch (IOException e)
             {
-                Debug.LogError("[Kaj Shader Optimizer] Error reading shader file.  " + e.ToString());
+                Debug.LogError("[Shader Optimizer] Error reading shader file.  " + e.ToString());
                 return false;
             }
 
@@ -948,23 +937,50 @@ namespace Thry
 
             bool isCommentedOut = false;
 
-            int removedViaKeyword = 0;
+            int currentExcludeDepth = 0;
+            bool doExclude = false;
+            int excludeStartDepth = 0;
 
             for (int i=0; i<fileLines.Length; i++)
             {
                 string lineParsed = fileLines[i].TrimStart();
 
-                //Remove stuff between comment keywords
-                string trimmedForKeyword = lineParsed.TrimStart('/').TrimEnd();
-                if (removeBetweenKeywords.ContainsKey(trimmedForKeyword))
+                if(lineParsed.StartsWith("//", StringComparison.Ordinal))
                 {
-                    removeBetweenKeywords[trimmedForKeyword] = !removeBetweenKeywords[trimmedForKeyword];
-                    if (removeBetweenKeywords[trimmedForKeyword])
-                        removedViaKeyword++;
-                    else
-                        removedViaKeyword--;
+                    //Exclusion logic
+                    if(lineParsed.StartsWith("//ifex", StringComparison.Ordinal))
+                    {
+                        var condition = DefineableCondition.Parse(lineParsed.Substring(6), material);
+                        if(condition.Test())
+                        {
+                            doExclude = true;
+                            excludeStartDepth = currentExcludeDepth;
+                        }
+                        currentExcludeDepth++;
+                    }
+                    else if(lineParsed.StartsWith("//endex", StringComparison.Ordinal))
+                    {
+                        if(currentExcludeDepth == 0)
+                        {
+                            Debug.LogError("[Shader Optimizer] Number of 'endex' statements does not match number of 'ifex' statements."
+                                +$"\nError found in file '{filePath}' line {i+1}");
+                        }
+                        else
+                        {
+                            currentExcludeDepth--;
+                            if(currentExcludeDepth == excludeStartDepth)
+                            {
+                                doExclude = false;
+                            }
+                        }
+                        continue;
+                    }else
+                    {
+                        //Else is just a comment, ignore line
+                        continue;
+                    }
                 }
-                if (removedViaKeyword > 0) continue;
+                if (doExclude) continue;
 
                 //removes empty lines
                 if (lineParsed.Length == 0) continue;
@@ -977,10 +993,6 @@ namespace Thry
                 else if (lineParsed == "/*")
                 {
                     isCommentedOut = true;
-                    continue;
-                }
-                else if (lineParsed.StartsWith("//", StringComparison.Ordinal))
-                {
                     continue;
                 }
                 if (isCommentedOut) continue;
@@ -1075,7 +1087,7 @@ namespace Thry
                         {
                             includeFullpath = GetFullPath(includeFilename, Path.GetDirectoryName(filePath));
                         }
-                        if (!ParseShaderFilesRecursive(filesParsed, newTopLevelDirectory, includeFullpath, macros, material, removeBetweenKeywords))
+                        if (!ParseShaderFilesRecursive(filesParsed, newTopLevelDirectory, includeFullpath, macros, material))
                             return false;
                         //Change include to be be ralative to only one directory up, because all files are moved into the same folder
                         fileLines[i] = fileLines[i].Replace(includeFilename, "/"+includeFilename.Split('/').Last());
@@ -1486,36 +1498,59 @@ namespace Thry
                 else material.SetFloat(GetOptimizerPropertyName(material.shader), 0);
             }
         }
+        private static bool GuessShader(Shader locked, out Shader shader)
+        {
+            string name = locked.name;
+            name = Regex.Match(name.Substring(7), @".*(?=\/)").Value;
+            ShaderInfo[] allShaders = ShaderUtil.GetAllShaderInfo();
+            int closestDistance = int.MaxValue;
+            string closestShaderName = null;
+            foreach (ShaderInfo s in allShaders)
+            {
+                if (!s.supported) continue;
+                int d = Helper.LevenshteinDistance(s.name, name);
+                if(d < closestDistance)
+                {
+                    closestDistance = d;
+                    closestShaderName = s.name;
+                }
+            }
+            shader = Shader.Find(closestShaderName);
+            return shader != null && closestDistance < name.Length / 2;
+        }
         private static UnlockSuccess UnlockConcrete (Material material)
         {
             Shader lockedShader = material.shader;
             // Revert to original shader
             string originalShaderName = material.GetTag("OriginalShader", false, "");
-            if (originalShaderName == "")
+            Shader orignalShader = null;
+            if (originalShaderName == "" && !GuessShader(lockedShader, out orignalShader))
             {
                 if (material.shader.name.StartsWith("Hidden/"))
                 {
-                    Debug.LogError("[Kaj Shader Optimizer] Original shader not saved to material, could not unlock shader");
+                    if (EditorUtility.DisplayDialog("Unlock Material", $"The original shader for {material.name} could not be resolved.\nPlease select a shader manually.", "Ok")) { }
+                    Debug.LogError("[Shader Optimizer] Original shader not saved to material, could not unlock shader");
                     return UnlockSuccess.hasNoSavedShader;
                 }
                 else
                 {
-                    Debug.LogWarning("[Kaj Shader Optimizer] Original shader not saved to material, but material also doesnt seem to be locked.");
+                    Debug.LogWarning("[Shader Optimizer] Original shader not saved to material, but material also doesnt seem to be locked.");
                     return UnlockSuccess.wasNotLocked;
                 }
 
             }
-            Shader orignalShader = Shader.Find(originalShaderName);
-            if (orignalShader == null)
+            if(orignalShader == null) orignalShader = Shader.Find(originalShaderName);
+            if (orignalShader == null && !GuessShader(lockedShader, out orignalShader))
             {
                 if (material.shader.name.StartsWith("Hidden/"))
                 {
-                    Debug.LogError("[Kaj Shader Optimizer] Original shader " + originalShaderName + " could not be found");
+                    if (EditorUtility.DisplayDialog("Unlock Material", $"The original shader for {material.name} could not be resolved.\nPlease select a shader manually.", "Ok")) { }
+                    Debug.LogError("[Shader Optimizer] Original shader " + originalShaderName + " could not be found");
                     return UnlockSuccess.couldNotFindOriginalShader;
                 }
                 else
                 {
-                    Debug.LogWarning("[Kaj Shader Optimizer] Original shader not saved to material, but material also doesnt seem to be locked.");
+                    Debug.LogWarning("[Shader Optimizer] Original shader not saved to material, but material also doesnt seem to be locked.");
                     return UnlockSuccess.wasNotLocked;
                 }
             }
@@ -1760,7 +1795,8 @@ namespace Thry
                 }
                 
 #endif
-                SetLockedForAllMaterials(materials, 1, showProgressbar: true, showDialog: PersistentData.Get<bool>("ShowLockInDialog", true), allowCancel: false);
+                if(SetLockedForAllMaterials(materials, 1, showProgressbar: true, showDialog: PersistentData.Get<bool>("ShowLockInDialog", true), allowCancel: false) == false)
+                    return false;
                 //returning true all the time, because build process cant be stopped it seems
                 return true;
             }
@@ -1921,7 +1957,7 @@ namespace Thry
                             ShaderOptimizer.Lock(m,
                                 MaterialEditor.GetMaterialProperties(new UnityEngine.Object[] { m }),
                                 applyShaderLater: true);
-                            s_shaderPropertyCombinations.Add(hash, m);
+                            s_shaderPropertyCombinations[hash] = m;
                         }
                     }
                     else if (lockState == 0)
@@ -1931,8 +1967,18 @@ namespace Thry
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError("Could not un-/lock material " + m.name);
-                    Debug.LogError(e);
+                    string position = e.StackTrace.Split('\n').FirstOrDefault(l => l.Contains("ThryEditor"));
+                    if(position != null)
+                    {
+                        position = position.Split(new string[]{ "ThryEditor" }, StringSplitOptions.None).LastOrDefault();
+                        Debug.LogError("Could not un-/lock material " + m.name + " | Error thrown at " + position+ "\n"+e.StackTrace);
+                    }else
+                    {
+                        Debug.LogError("Could not un-/lock material " + m.name + "\n"+e.StackTrace);
+                    }
+                    EditorUtility.ClearProgressBar();
+                    AssetDatabase.StopAssetEditing();
+                    return false;
                 }
                 i++;
             }
@@ -1952,12 +1998,12 @@ namespace Thry
                         m.SetFloat(GetOptimizerPropertyName(m.shader), 1);
                     }
                 }
-                if(ShaderEditor.Active != null && ShaderEditor.Active.IsDrawing)
-                {
-                    GUIUtility.ExitGUI();
-                }
             }
             AssetDatabase.Refresh();
+            if (ShaderEditor.Active != null && ShaderEditor.Active.IsDrawing)
+            {
+                GUIUtility.ExitGUI();
+            }
             return true;
         }
 
