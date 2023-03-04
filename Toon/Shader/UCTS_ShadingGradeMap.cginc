@@ -1,6 +1,6 @@
 ﻿//UCTS_ShadingGradeMap.cginc
 //Unitychan Toon Shader ver.2.0
-//v.2.0.8
+//v.2.0.9
 //nobuyuki@unity3d.com
 //https://github.com/unity3d-jp/UnityChanToonShaderVer2_Project
 //(C)Unity Technologies Japan/UCL
@@ -163,7 +163,8 @@
 #elif _IS_ANGELRING_ON
                 float2 texcoord1 : TEXCOORD1;
 #endif
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                // v.2.0.9
+                UNITY_VERTEX_INPUT_INSTANCE_ID 
             };
             struct VertexOutput {
                 float4 pos : SV_POSITION;
@@ -191,6 +192,7 @@
                 UNITY_FOG_COORDS(9)
                 //
 #endif
+                // v.2.0.9
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -199,7 +201,6 @@
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                
                 o.uv0 = v.texcoord0;
 //v.2.0.4
 #ifdef _IS_ANGELRING_OFF
@@ -224,7 +225,7 @@
             float4 frag(VertexOutput i, fixed facing : VFACE) : SV_TARGET {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-    
+
                 i.normalDir = normalize(i.normalDir);
                 float3x3 tangentTransform = float3x3( i.tangentDir, i.bitangentDir, i.normalDir);
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);

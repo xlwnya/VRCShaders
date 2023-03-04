@@ -1,6 +1,6 @@
 ﻿//UCTS_ShadowCaster.cginc
 //Unitychan Toon Shader ver.2.0
-//v.2.0.8
+//v.2.0.9
 //nobuyuki@unity3d.com
 //https://github.com/unity3d-jp/UnityChanToonShaderVer2_Project
 //(C)Unity Technologies Japan/UCL
@@ -53,7 +53,6 @@
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                
 #ifdef _IS_CLIPPING_MODE
 //_Clipping
                 o.uv0 = v.texcoord0;
@@ -69,8 +68,7 @@
             }
             float4 frag(VertexOutput i) : SV_TARGET {
                 UNITY_SETUP_INSTANCE_ID(i);
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-    
+//                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 #ifdef _IS_CLIPPING_MODE
 //_Clipping
                 float2 Set_UV0 = i.uv0;
