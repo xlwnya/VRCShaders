@@ -9,6 +9,7 @@ LICENSE: See each shader's LICENSE/README.
 * MMS3: MIT https://miniscape.booth.pm/items/1627422
 * MnMrShader2: MIT https://miniscape.booth.pm/items/1264065
 * MToon: MIT https://github.com/Santarh/MToon
+* MToon10: MIT https://github.com/vrm-c/UniVRM/tree/master/Assets/VRMShaders/VRM10/MToon10
 * PoiyomiToonShader: MIT https://github.com/poiyomi/PoiyomiToonShader
 * Reflex Shader 2: MIT https://reflex.booth.pm/items/1088971
 * Sunao Shader: MIT https://agenasu.booth.pm/items/1723985
