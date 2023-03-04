@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -225,6 +225,8 @@
 
         // Anti-Glare とライト色ブレンドを同時に計算
         color.rgb *= i.light_color;
+        // ディゾルブ
+        affectDissolve(i.uv, color);
         // Alpha は 0-1 にクランプ
         color.a = saturate(color.a);
 

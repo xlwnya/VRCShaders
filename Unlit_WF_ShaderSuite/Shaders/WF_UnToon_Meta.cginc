@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -106,7 +106,7 @@
 FEATURE_TGL_ON_BEGIN(_ES_Enable)
         float4 es_mask  = PICK_SUB_TEX2D(_EmissionMap, _MainTex, uv_main).rgba;
         float4 es_color = _EmissionColor * es_mask;
-        o.Emission  = es_color.rgb * es_color.a * lerp(1, _LBE_EmissionMultiplier, _LBE_Enable);
+        o.Emission  = es_color.rgb * lerp(1, _LBE_EmissionMultiplier, _LBE_Enable);
 FEATURE_TGL_END
 
 #endif

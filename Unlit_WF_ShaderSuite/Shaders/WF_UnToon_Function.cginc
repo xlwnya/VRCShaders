@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -170,13 +170,13 @@ FEATURE_TGL_END
     // Alpha Transparent
     ////////////////////////////
 
-    #if defined(_WF_ALPHA_BLEND) || defined(_WF_ALPHA_FRESNEL) || defined(_WF_ALPHA_CUSTOM)
+    #if defined(_WF_ALPHA_FRESNEL)
         #ifndef _WF_ALPHA_BLEND
             #define _WF_ALPHA_BLEND
         #endif
     #endif
 
-    #if defined(_WF_ALPHA_BLEND) || defined(_WF_ALPHA_CUTOUT)
+    #if defined(_WF_ALPHA_BLEND) || defined(_WF_ALPHA_CUTOUT) || defined(_WF_ALPHA_CUTFADE) || defined(_WF_ALPHA_CUSTOM)
         #ifndef _AL_ENABLE
             #define _AL_ENABLE
         #endif
@@ -205,16 +205,20 @@ FEATURE_TGL_END
 
             #if defined(_WF_ALPHA_CUSTOM)
                 _WF_ALPHA_CUSTOM
-            #elif defined(_WF_ALPHA_CUTOUT)
+            #elif defined(_WF_ALPHA_CUTOUT) || defined(_WF_ALPHA_CUTFADE)
                 alpha = smoothstep(_Cutoff - 0.0625, _Cutoff + 0.0625, alpha);
-                if (TGL_OFF(_AL_AlphaToMask)) {
+                #if defined(_WF_ALPHA_CUTFADE)
+	                if (TGL_OFF(_AL_AlphaToMask)) {
+                #endif
                     if (alpha < 0.5) {
                         discard;
                         alpha = 0;
                     } else {
                         alpha = 1;
                     }
-                }
+                #if defined(_WF_ALPHA_CUTFADE)
+    	            }
+                #endif
             #else
                 alpha *= _AL_Power;
             #endif
@@ -1274,6 +1278,16 @@ FEATURE_TGL_END
     // Ambient Occlusion
     ////////////////////////////
 
+    #ifndef SHADOWS_SHADOWMASK
+        #define _AO_PICK_LMAP(uv_lmap)      pickLightmap(uv_lmap)
+        #define _AO_PICK_LMAP_LOD(uv_lmap)  pickLightmapLod(uv_lmap)
+    #else
+        #define _AO_PICK_LMAP(uv_lmap)      (pickLightmap(uv_lmap) + ONE_VEC3)
+        #define _AO_PICK_LMAP_LOD(uv_lmap)  (pickLightmapLod(uv_lmap) + ONE_VEC3)
+        // SHADOWS_SHADOWMASK が有るときは、ライトマップに直接光はベイクされていないので白色を加算する
+        // BakedIndirect もここを通したかったが MixedLight 無しの場合と区別できなかったので妥協
+    #endif
+
     #ifdef _AO_ENABLE
 
         void affectOcclusion(IN_FRAG i, float2 uv_main, inout float4 color) {
@@ -1289,7 +1303,7 @@ FEATURE_TGL_ON_BEGIN(_AO_Enable)
     #ifndef _WF_AO_ONLY_LMAP
             if (TGL_ON(_AO_UseLightMap)) {
     #endif
-                occlusion *= pickLightmap(i.uv_lmap);
+                occlusion *= _AO_PICK_LMAP(i.uv_lmap);
     #ifndef _WF_AO_ONLY_LMAP
             }
     #endif
@@ -1311,13 +1325,13 @@ FEATURE_TGL_END
                     return ONE_VEC3;    // Lightmap が使えてAOが有効、かつONLYのときはAO側で色を合成するので白を返す
                 #else
                     #ifndef _WF_LEGACY_FEATURE_SWITCH
-                        return TGL_ON(_AO_UseLightMap) ? ONE_VEC3 : pickLightmapLod(uv_lmap);
+                        return TGL_ON(_AO_UseLightMap) ? ONE_VEC3 : _AO_PICK_LMAP_LOD(uv_lmap);
                     #else
-                        return TGL_ON(_AO_Enable) && TGL_ON(_AO_UseLightMap) ? ONE_VEC3 : pickLightmapLod(uv_lmap);
+                        return TGL_ON(_AO_Enable) && TGL_ON(_AO_UseLightMap) ? ONE_VEC3 : _AO_PICK_LMAP_LOD(uv_lmap);
                     #endif
                 #endif
             #else
-                return pickLightmapLod(uv_lmap);    // Lightmap が使えるがAOが無効のときは、Lightmap から明るさを取得
+                return _AO_PICK_LMAP_LOD(uv_lmap);    // Lightmap が使えるがAOが無効のときは、Lightmap から明るさを取得
             #endif
         #else
             return sampleSHLightColor();    // Lightmap が使えないときは SH を返す
@@ -1356,6 +1370,40 @@ FEATURE_TGL_END
         }
     #else
         #define affectDistanceFade(i, facing, color)
+    #endif
+
+    ////////////////////////////
+    // Dissolve
+    ////////////////////////////
+
+    #ifdef _DSV_ENABLE
+
+        void affectDissolve(float2 uv1, inout float4 color) {
+FEATURE_TGL_ON_BEGIN(_DSV_Enable)
+
+        if (1 - NZF < _DSV_Dissolve) {
+            // nop
+        }
+        else if (_DSV_Dissolve < NZF) {
+            discard;
+        }
+        else {
+            float2 uv   = TRANSFORM_TEX(uv1, _DSV_CtrlTex);
+            float3 tex  = PICK_MAIN_TEX2D(_DSV_CtrlTex, uv);
+            tex = TGL_OFF(_DSV_TexIsSRGB) ? tex : LinearToGammaSpace(tex);
+
+            float pos = _DSV_Dissolve / (1 - _DSV_SparkWidth) - (TGL_OFF(_DSV_Invert) ? tex.r : 1 - tex.r);
+            if (pos < 0) {
+                discard;
+            }
+
+            color.rgb += _DSV_SparkColor * (1 - smoothstep(0, NON_ZERO_FLOAT(_DSV_SparkWidth), pos));
+        }
+
+FEATURE_TGL_END
+        }
+    #else
+        #define affectDissolve(uv1, color)
     #endif
 
     ////////////////////////////
@@ -1424,10 +1472,11 @@ FEATURE_TGL_ON_BEGIN(_CRF_Enable)
 
             float4 grab_uv = ComputeGrabScreenPos(refract_scr_pos);
             grab_uv.xy /= grab_uv.w;
-            float3 back_color = PICK_GRAB_TEX2D(_WF_PB_GRAB_TEXTURE, grab_uv).rgb * (_CRF_Tint.rgb * unity_ColorSpaceDouble.rgb);
+            float4 grab_color = PICK_GRAB_TEX2D(_WF_PB_GRAB_TEXTURE, grab_uv.xy);
+            float3 back_color = grab_color.rgb * (_CRF_Tint.rgb * unity_ColorSpaceDouble.rgb);
 
-            color.rgb = lerp(back_color.rgb, color.rgb, color.a);
-            color.a = 1;
+            color.rgb = lerp(lerp(color.rgb, back_color.rgb, grab_color.a), color.rgb, color.a);
+            color.a = lerp(color.a, 1, grab_color.a);
 FEATURE_TGL_END
         }
 

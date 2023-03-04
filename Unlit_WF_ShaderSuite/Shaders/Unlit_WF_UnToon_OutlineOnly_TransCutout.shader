@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -22,7 +22,7 @@ Shader "UnlitWF/UnToon_Outline/WF_UnToon_OutlineOnly_TransCutout" {
             _MainTex                ("Main Texture", 2D) = "white" {}
         [HDR]
             _Color                  ("Color", Color) = (1, 1, 1, 1)
-        [Toggle(_)]
+        [ToggleUI]
             _UseVertexColor         ("Use Vertex Color", Range(0, 1)) = 0
 
         // Alpha
@@ -31,10 +31,10 @@ Shader "UnlitWF/UnToon_Outline/WF_UnToon_OutlineOnly_TransCutout" {
             _AL_Source              ("[AL] Alpha Source", Float) = 0
         [NoScaleOffset]
             _AL_MaskTex             ("[AL] Alpha Mask Texture", 2D) = "white" {}
-        [Toggle(_)]
+        [ToggleUI]
             _AL_InvMaskVal          ("[AL] Invert Mask Value", Range(0, 1)) = 0
             _Cutoff                 ("[AL] Cutoff Threshold", Range(0, 1)) = 0.5
-        [Toggle(_)]
+        [ToggleUI]
             _AL_AlphaToMask         ("[AL] Alpha-To-Coverage (use MSAA)", Float) = 0
 
         // アウトライン
@@ -50,9 +50,22 @@ Shader "UnlitWF/UnToon_Outline/WF_UnToon_OutlineOnly_TransCutout" {
             _TL_BlendBase           ("[TL] Blend Base Color", Range(0, 1)) = 0
         [NoScaleOffset]
             _TL_MaskTex             ("[TL] Mask Texture (R)", 2D) = "white" {}
-        [Toggle(_)]
+        [ToggleUI]
             _TL_InvMaskVal          ("[TL] Invert Mask Value", Float) = 0
             _TL_Z_Shift             ("[TL] Z-shift (tweak)", Range(-0.1, 0.5)) = 0
+
+        // Dissolve
+        [WFHeaderToggle(Dissolve)]
+            _DSV_Enable             ("[DSV] Enable", Float) = 0
+            _DSV_Dissolve           ("[DSV] Dissolve", Range(0, 1)) = 1.0
+        [ToggleUI]
+            _DSV_Invert             ("[DSV] Invert", Range(0, 1)) = 0
+            _DSV_CtrlTex            ("[DSV] Control Texture (R)", 2D) = "black" {}
+        [ToggleUI]
+            _DSV_TexIsSRGB          ("[DSV] sRGB", Range(0, 1)) = 1
+        [HDR]
+            _DSV_SparkColor         ("[DSV] Spark Color", Color) = (1, 1, 1, 1)
+            _DSV_SparkWidth         ("[DSV] Spark Width", Range(0, 0.2)) = 0
 
         // Fog
         [WFHeaderToggle(Fog)]
@@ -75,20 +88,20 @@ Shader "UnlitWF/UnToon_Outline/WF_UnToon_OutlineOnly_TransCutout" {
             _GL_BlendPower          ("Chroma Reaction", Range(0, 1)) = 0.8
 
         [WFHeader(Lit Advance)]
-        [Enum(AUTO,0,ONLY_DIRECTIONAL_LIT,1,ONLY_POINT_LIT,2,CUSTOM_WORLD_DIR,3,CUSTOM_LOCAL_DIR,4,CUSTOM_WORLD_POS,5)]
+        [WF_Enum(UnlitWF.SunSourceMode)]
             _GL_LightMode           ("Sun Source", Float) = 0
             _GL_CustomAzimuth       ("Custom Sun Azimuth", Range(0, 360)) = 0
             _GL_CustomAltitude      ("Custom Sun Altitude", Range(-90, 90)) = 45
         [WF_Vector3]
             _GL_CustomLitPos        ("Custom Light Pos", Vector) = (0, 3, 0)
-        [Toggle(_)]
+        [ToggleUI]
             _GL_DisableBackLit      ("Disable BackLit", Range(0, 1)) = 0
-        [Toggle(_)]
+        [ToggleUI]
             _GL_DisableBasePos      ("Disable ObjectBasePos", Range(0, 1)) = 0
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/12/17", Float) = 0
+            _CurrentVersion         ("2023/02/25", Float) = 0
         [HideInInspector]
         [WF_FixFloat(0.0)]
             _FallBack               ("UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_OutlineOnly_TransCutout", Float) = 0
@@ -108,6 +121,7 @@ Shader "UnlitWF/UnToon_Outline/WF_UnToon_OutlineOnly_TransCutout" {
             Tags { "LightMode" = "ForwardBase" }
 
             Cull FRONT
+            Blend One Zero, One OneMinusSrcAlpha
             AlphaToMask [_AL_AlphaToMask]
 
             CGPROGRAM
@@ -119,12 +133,13 @@ Shader "UnlitWF/UnToon_Outline/WF_UnToon_OutlineOnly_TransCutout" {
             #pragma target 4.5
             #pragma require geometry
 
-            #define _WF_ALPHA_CUTOUT
+            #define _WF_ALPHA_CUTFADE
 
             #pragma shader_feature_local _ _GL_AUTO_ENABLE _GL_ONLYDIR_ENABLE _GL_ONLYPOINT_ENABLE _GL_WSDIR_ENABLE _GL_LSDIR_ENABLE _GL_WSPOS_ENABLE
             #pragma shader_feature_local _ _TL_EDGE_ENABLE
             #pragma shader_feature_local _TL_ENABLE
             #pragma shader_feature_local _VC_ENABLE
+            #pragma shader_feature_local_fragment _DSV_ENABLE
             #pragma shader_feature_local_fragment _TFG_ENABLE
 
             #pragma multi_compile_fwdbase
@@ -132,7 +147,7 @@ Shader "UnlitWF/UnToon_Outline/WF_UnToon_OutlineOnly_TransCutout" {
             #pragma multi_compile_instancing
             #pragma multi_compile _ LOD_FADE_CROSSFADE
 
-            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE SHADOWS_SHADOWMASK
+            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE
 
             #include "WF_UnToon.cginc"
 

@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -187,6 +187,8 @@
 
         // フレネル
         affectFresnelAlpha(uv_main, ws_normal, ws_view_dir, color);
+        // ディゾルブ
+        affectDissolve(i.uv, color);
         // Alpha は 0-1 にクランプ
         color.a = saturate(color.a);
         // リフラクション

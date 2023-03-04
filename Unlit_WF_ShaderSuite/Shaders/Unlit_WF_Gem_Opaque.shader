@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -24,7 +24,7 @@ Shader "UnlitWF/WF_Gem_Opaque" {
             _MainTex                ("Main Texture", 2D) = "white" {}
         [Enum(OFF,0,FRONT,1,BACK,2)]
             _CullMode               ("Cull Mode", int) = 2
-        [Toggle(_)]
+        [ToggleUI]
             _UseVertexColor         ("Use Vertex Color", Range(0, 1)) = 0
 
         // Flake
@@ -59,6 +59,19 @@ Shader "UnlitWF/WF_Gem_Opaque" {
         [Enum(NONE,0,X,1,Y,2,XY,3)]
             _FlipMirror             ("[NM] Flip Mirror", Float) = 0
 
+        // Dissolve
+        [WFHeaderToggle(Dissolve)]
+            _DSV_Enable             ("[DSV] Enable", Float) = 0
+            _DSV_Dissolve           ("[DSV] Dissolve", Range(0, 1)) = 1.0
+        [ToggleUI]
+            _DSV_Invert             ("[DSV] Invert", Range(0, 1)) = 0
+            _DSV_CtrlTex            ("[DSV] Control Texture (R)", 2D) = "black" {}
+        [ToggleUI]
+            _DSV_TexIsSRGB          ("[DSV] sRGB", Range(0, 1)) = 1
+        [HDR]
+            _DSV_SparkColor         ("[DSV] Spark Color", Color) = (1, 1, 1, 1)
+            _DSV_SparkWidth         ("[DSV] Spark Width", Range(0, 0.2)) = 0
+
         // Lit
         [WFHeader(Lit)]
         [Gamma]
@@ -68,20 +81,20 @@ Shader "UnlitWF/WF_Gem_Opaque" {
             _GL_BlendPower          ("Chroma Reaction", Range(0, 1)) = 0.8
 
         [WFHeader(Lit Advance)]
-        [Enum(AUTO,0,ONLY_DIRECTIONAL_LIT,1,ONLY_POINT_LIT,2,CUSTOM_WORLD_DIR,3,CUSTOM_LOCAL_DIR,4,CUSTOM_WORLD_POS,5)]
+        [WF_Enum(UnlitWF.SunSourceMode)]
             _GL_LightMode           ("Sun Source", Float) = 0
             _GL_CustomAzimuth       ("Custom Sun Azimuth", Range(0, 360)) = 0
             _GL_CustomAltitude      ("Custom Sun Altitude", Range(-90, 90)) = 45
         [WF_Vector3]
             _GL_CustomLitPos        ("Custom Light Pos", Vector) = (0, 3, 0)
-        [Toggle(_)]
+        [ToggleUI]
             _GL_DisableBackLit      ("Disable BackLit", Range(0, 1)) = 0
-        [Toggle(_)]
+        [ToggleUI]
             _GL_DisableBasePos      ("Disable ObjectBasePos", Range(0, 1)) = 0
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/12/17", Float) = 0
+            _CurrentVersion         ("2023/02/25", Float) = 0
         [HideInInspector]
         [WF_FixFloat(0.0)]
             _FallBack               ("UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_Opaque", Float) = 0
@@ -115,13 +128,14 @@ Shader "UnlitWF/WF_Gem_Opaque" {
             #pragma shader_feature_local _ _GL_AUTO_ENABLE _GL_ONLYDIR_ENABLE _GL_ONLYPOINT_ENABLE _GL_WSDIR_ENABLE _GL_LSDIR_ENABLE _GL_WSPOS_ENABLE
             #pragma shader_feature_local _NM_ENABLE
             #pragma shader_feature_local _VC_ENABLE
+            #pragma shader_feature_local _DSV_ENABLE
 
             #pragma multi_compile_fwdbase
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
             #pragma multi_compile _ LOD_FADE_CROSSFADE
 
-            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE SHADOWS_SHADOWMASK
+            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE
 
             #include "WF_Gem.cginc"
 

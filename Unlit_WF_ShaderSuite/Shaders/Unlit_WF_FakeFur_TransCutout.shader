@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -23,7 +23,7 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
         [HDR]
             _Color                  ("Color", Color) = (1, 1, 1, 1)
             _Cutoff                 ("Alpha CutOff Level", Range(0, 1)) = 0.2
-        [Toggle(_)]
+        [ToggleUI]
             _AL_AlphaToMask         ("Alpha-To-Coverage (use MSAA)", Float) = 0
 
         // ファー設定
@@ -48,13 +48,13 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
         [Header(Fur Mask Texture)]
         [NoScaleOffset]
             _FUR_MaskTex            ("[FUR] Mask Texture", 2D) = "white" {}
-        [Toggle(_)]
+        [ToggleUI]
             _FUR_InvMaskVal         ("[FUR] Invert Mask Value", Range(0, 1)) = 0
 
         // 色変換
         [WFHeaderToggle(Color Change)]
             _CLC_Enable             ("[CLC] Enable", Float) = 0
-        [Toggle(_)]
+        [ToggleUI]
             _CLC_Monochrome         ("[CLC] monochrome", Range(0, 1)) = 0
             _CLC_DeltaH             ("[CLC] Hur", Range(0, 1)) = 0
             _CLC_DeltaS             ("[CLC] Saturation", Range(-1, 1)) = 0
@@ -63,7 +63,7 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
         // Matcapハイライト
         [WFHeaderToggle(Light Matcap)]
             _HL_Enable              ("[HL] Enable", Float) = 0
-        [Enum(MEDIAN_CAP,0,LIGHT_CAP,1,SHADE_CAP,2)]
+        [WF_Enum(UnlitWF.BlendModeHL)]
             _HL_CapType             ("[HL] Matcap Type", Float) = 0
         [NoScaleOffset]
             _HL_MatcapTex           ("[HL] Matcap Sampler", 2D) = "gray" {}
@@ -72,13 +72,13 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             _HL_Parallax            ("[HL] Parallax", Range(0, 1)) = 0.75
         [NoScaleOffset]
             _HL_MaskTex             ("[HL] Mask Texture (RGB)", 2D) = "white" {}
-        [Toggle(_)]
+        [ToggleUI]
             _HL_InvMaskVal          ("[HL] Invert Mask Value", Range(0, 1)) = 0
             _HL_MatcapColor         ("[HL] Matcap Tint Color", Color) = (0.5, 0.5, 0.5, 1)
 
         [WFHeaderToggle(Light Matcap 2)]
             _HL_Enable_1            ("[HA] Enable", Float) = 0
-        [Enum(MEDIAN_CAP,0,LIGHT_CAP,1,SHADE_CAP,2)]
+        [WF_Enum(UnlitWF.BlendModeHL)]
             _HL_CapType_1           ("[HA] Matcap Type", Float) = 0
         [NoScaleOffset]
             _HL_MatcapTex_1         ("[HA] Matcap Sampler", 2D) = "gray" {}
@@ -87,7 +87,7 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             _HL_Parallax_1          ("[HA] Parallax", Range(0, 1)) = 0.75
         [NoScaleOffset]
             _HL_MaskTex_1           ("[HA] Mask Texture", 2D) = "white" {}
-        [Toggle(_)]
+        [ToggleUI]
             _HL_InvMaskVal_1        ("[HA] Invert Mask Value", Range(0, 1)) = 0
             _HL_MatcapColor_1       ("[HA] Matcap Tint Color", Color) = (0.5, 0.5, 0.5, 1)
 
@@ -111,11 +111,11 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             _TS_Power               ("[TS] Shade Power", Range(0, 2)) = 1
             _TS_MinDist             ("[TS] FadeOut Distance (Near)", Range(0, 15)) = 1.0
             _TS_MaxDist             ("[TS] FadeOut Distance (Far)", Range(0, 15)) = 4.0
-        [Toggle(_)]
+        [ToggleUI]
             _TS_FixContrast         ("[TS] Dont Ajust Contrast", Range(0, 1)) = 0
         [NoScaleOffset]
             _TS_MaskTex             ("[TS] Anti-Shadow Mask Texture (R)", 2D) = "black" {}
-        [Toggle(_)]
+        [ToggleUI]
             _TS_InvMaskVal          ("[TS] Invert Mask Value", Range(0, 1)) = 0
         [Header(ToonShade Advance)]
             _TS_1stBorder           ("[TS] 1st Border", Range(0, 1)) = 0.4
@@ -130,13 +130,13 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             _TR_Enable              ("[TR] Enable", Float) = 0
         [HDR]
             _TR_Color               ("[TR] Rim Color", Color) = (0.8, 0.8, 0.8, 1)
-        [Enum(ADD,2,ALPHA,1,ADD_AND_SUB,0)]
+        [WF_Enum(UnlitWF.BlendModeTR,ADD,ALPHA,ADD_AND_SUB)]
             _TR_BlendType           ("[TR] Blend Type", Float) = 0
             _TR_Power               ("[TR] Power", Range(0, 2)) = 1
             _TR_Feather             ("[TR] Feather", Range(0, 0.2)) = 0.05
         [NoScaleOffset]
             _TR_MaskTex             ("[TR] Mask Texture (RGB)", 2D) = "white" {}
-        [Toggle(_)]
+        [ToggleUI]
             _TR_InvMaskVal          ("[TR] Invert Mask Value", Range(0, 1)) = 0
         [Header(RimLight Advance)]
             _TR_PowerTop            ("[TR] Power Top", Range(0, 0.5)) = 0.05
@@ -150,8 +150,21 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             _DFD_MinDist            ("[DFD] Fade Distance (Near)", Range(0, 0.5)) = 0.02
             _DFD_MaxDist            ("[DFD] Fade Distance (Far)", Range(0, 0.5)) = 0.08
             _DFD_Power              ("[DFD] Power", Range(0, 1)) = 1
-        [Toggle(_)]
+        [ToggleUI]
             _DFD_BackShadow         ("[DFD] BackFace Shadow", Float) = 1
+
+        // Dissolve
+        [WFHeaderToggle(Dissolve)]
+            _DSV_Enable             ("[DSV] Enable", Float) = 0
+            _DSV_Dissolve           ("[DSV] Dissolve", Range(0, 1)) = 1.0
+        [ToggleUI]
+            _DSV_Invert             ("[DSV] Invert", Range(0, 1)) = 0
+            _DSV_CtrlTex            ("[DSV] Control Texture (R)", 2D) = "black" {}
+        [ToggleUI]
+            _DSV_TexIsSRGB          ("[DSV] sRGB", Range(0, 1)) = 1
+        [HDR]
+            _DSV_SparkColor         ("[DSV] Spark Color", Color) = (1, 1, 1, 1)
+            _DSV_SparkWidth         ("[DSV] Spark Width", Range(0, 0.2)) = 0
 
         // Lit
         [WFHeader(Lit)]
@@ -160,24 +173,24 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
         [Gamma]
             _GL_LevelMax            ("Saturate Intensity", Range(0, 1)) = 0.8
             _GL_BlendPower          ("Chroma Reaction", Range(0, 1)) = 0.8
-        [Toggle(_)]
+        [ToggleUI]
             _GL_CastShadow          ("Cast Shadows", Range(0, 1)) = 1
 
         [WFHeader(Lit Advance)]
-        [Enum(AUTO,0,ONLY_DIRECTIONAL_LIT,1,ONLY_POINT_LIT,2,CUSTOM_WORLD_DIR,3,CUSTOM_LOCAL_DIR,4,CUSTOM_WORLD_POS,5)]
+        [WF_Enum(UnlitWF.SunSourceMode)]
             _GL_LightMode           ("Sun Source", Float) = 0
             _GL_CustomAzimuth       ("Custom Sun Azimuth", Range(0, 360)) = 0
             _GL_CustomAltitude      ("Custom Sun Altitude", Range(-90, 90)) = 45
         [WF_Vector3]
             _GL_CustomLitPos        ("Custom Light Pos", Vector) = (0, 3, 0)
-        [Toggle(_)]
+        [ToggleUI]
             _GL_DisableBackLit      ("Disable BackLit", Range(0, 1)) = 0
-        [Toggle(_)]
+        [ToggleUI]
             _GL_DisableBasePos      ("Disable ObjectBasePos", Range(0, 1)) = 0
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/12/17", Float) = 0
+            _CurrentVersion         ("2023/02/25", Float) = 0
         [HideInInspector]
         [WF_FixFloat(0.0)]
             _FallBack               ("UnlitWF/UnToon_Mobile/WF_UnToon_Mobile_Opaque", Float) = 0
@@ -212,9 +225,9 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             #pragma shader_feature_local_fragment _HL_ENABLE_1
             #pragma shader_feature_local_fragment _TR_ENABLE
             #pragma shader_feature_local_fragment _DFD_ENABLE
+            #pragma shader_feature_local_fragment _DSV_ENABLE
 
             #pragma multi_compile_fwdbase
-            #pragma multi_compile_fog
             #pragma multi_compile_instancing
             #pragma multi_compile _ LOD_FADE_CROSSFADE
 
@@ -228,6 +241,7 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             Tags { "LightMode" = "ForwardBase" }
 
             Cull OFF
+            Blend One Zero, One OneMinusSrcAlpha
             AlphaToMask [_AL_AlphaToMask]
 
             CGPROGRAM
@@ -241,6 +255,7 @@ Shader "UnlitWF/WF_FakeFur_TransCutout" {
             #pragma shader_feature_local_fragment _ _TS_STEP1_ENABLE _TS_STEP2_ENABLE _TS_STEP3_ENABLE
             #pragma shader_feature_local_fragment _CLC_ENABLE
             #pragma shader_feature_local_fragment _DFD_ENABLE
+            #pragma shader_feature_local_fragment _DSV_ENABLE
 
             #pragma target 5.0
             #pragma multi_compile_fwdbase

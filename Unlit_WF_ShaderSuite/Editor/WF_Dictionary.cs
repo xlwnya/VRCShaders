@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -77,11 +77,6 @@ namespace UnlitWF
             new WFShaderName("BRP", "UnToon", "Tessellation", "Transparent",           "UnlitWF/UnToon_Tessellation/WF_UnToon_Tess_Transparent"),
             new WFShaderName("BRP", "UnToon", "Tessellation", "Transparent3Pass",      "UnlitWF/UnToon_Tessellation/WF_UnToon_Tess_Transparent3Pass"),
 
-            new WFShaderName("BRP", "UnToon", "Custom", "Transparent_Refracted",       "UnlitWF/Custom/WF_UnToon_Custom_Transparent_Refracted"),
-            new WFShaderName("BRP", "UnToon", "Custom", "Transparent_FrostedGlass",    "UnlitWF/Custom/WF_UnToon_Custom_Transparent_FrostedGlass"),
-            new WFShaderName("BRP", "UnToon", "Custom", "Ghost_Opaque",                "UnlitWF/Custom/WF_UnToon_Custom_GhostOpaque"),
-            new WFShaderName("BRP", "UnToon", "Custom", "Ghost_Transparent",           "UnlitWF/Custom/WF_UnToon_Custom_GhostTransparent"),
-
             // ================
             // FakeFur 系列
             // ================
@@ -112,10 +107,13 @@ namespace UnlitWF
             // ================
 
             new WFShaderName("BRP", "Water", "Surface", "Opaque",                      "UnlitWF/WF_Water_Surface_Opaque", represent: true),
+            new WFShaderName("BRP", "Water", "Surface", "TransCutout",                 "UnlitWF/WF_Water_Surface_TransCutout"),
             new WFShaderName("BRP", "Water", "Surface", "Transparent",                 "UnlitWF/WF_Water_Surface_Transparent"),
             new WFShaderName("BRP", "Water", "Surface", "Transparent_Refracted",       "UnlitWF/WF_Water_Surface_Transparent_Refracted"),
             new WFShaderName("BRP", "Water", "FX_Caustics", "Addition",                "UnlitWF/WF_Water_Caustics_Addition"),
             new WFShaderName("BRP", "Water", "FX_DepthFog", "Transparent",             "UnlitWF/WF_Water_DepthFog_Fade"),
+            new WFShaderName("BRP", "Water", "FX_Sun", "Addition",                     "UnlitWF/WF_Water_Sun_Addition"),
+            new WFShaderName("BRP", "Water", "FX_Lamp", "Addition",                    "UnlitWF/WF_Water_Lamp_Addition"),
 
             // ================
             // UnToon 系列(URP)
@@ -160,6 +158,14 @@ namespace UnlitWF
 
             new WFShaderName("URP", "Gem", "Basic", "Opaque",                          "UnlitWF_URP/WF_Gem_Opaque"),
             new WFShaderName("URP", "Gem", "Basic", "Transparent",                     "UnlitWF_URP/WF_Gem_Transparent", represent: true),
+
+            // ================
+            // Water 系列(URP)
+            // ================
+
+            new WFShaderName("URP", "Water", "Surface", "Opaque",                      "UnlitWF_URP/WF_Water_Surface_Opaque", represent: true),
+            new WFShaderName("URP", "Water", "Surface", "TransCutout",                 "UnlitWF_URP/WF_Water_Surface_TransCutout"),
+            new WFShaderName("URP", "Water", "Surface", "Transparent",                 "UnlitWF_URP/WF_Water_Surface_Transparent"),
         };
 
         private static bool HasPropertyPrefix(Material mat, string prefix)
@@ -221,6 +227,8 @@ namespace UnlitWF
                 new WFShaderFunction("WA3", "WAV_3", "Waving 3", (self, mat) => WFShaderFunction.IsEnable("_WAV_Enable_3", mat)),
                 new WFShaderFunction("WAS", "WAS", "Water Specular"),
                 new WFShaderFunction("WAM", "WAM", "Water Reflection"),
+                new WFShaderFunction("WAR", "WAR", "Water Lamp&Sun Reflection"),
+                new WFShaderFunction("WMI", "WMI", "Water VRC Mirror Reflection"),
 
                 // その他の機能
                 new WFShaderFunction("BKT", "BKT", "BackFace Texture"),
@@ -310,6 +318,7 @@ namespace UnlitWF
             new WFI18NTranslation("Color Change", "色変更"),
             new WFI18NTranslation("Detail NormalMap", "ディテールノーマルマップ"),
             new WFI18NTranslation("Distance Fade", "距離フェード"),
+            new WFI18NTranslation("Dissolve", "ディゾルブ"),
             new WFI18NTranslation("Emission", "エミッション"),
             new WFI18NTranslation("Fake Fur", "ファー"),
             new WFI18NTranslation("Fog", "フォグ"),
@@ -522,6 +531,12 @@ namespace UnlitWF
             new WFI18NTranslation("DFD", "Fade Distance (Far)", "フェード距離 (Far)"),
             new WFI18NTranslation("DFD", "Power", "強度"),
             new WFI18NTranslation("DFD", "BackFace Shadow", "裏面は影にする"),
+            // Dissolve
+            new WFI18NTranslation("DSV", "Dissolve", "ディゾルブ"),
+            new WFI18NTranslation("DSV", "Invert", "反転"),
+            new WFI18NTranslation("DSV", "Control Texture (R)", "制御テクスチャ (R)"),
+            new WFI18NTranslation("DSV", "Spark Color", "スパーク色"),
+            new WFI18NTranslation("DSV", "Spark Width", "スパーク幅"),
             // Toon Fog
             new WFI18NTranslation("TFG", "Color", "フォグの色"),
             new WFI18NTranslation("TFG", "Exponential", "変化の鋭さ"),
@@ -612,12 +627,41 @@ namespace UnlitWF
             new WFI18NTranslation("WAS", "Specular 2 Power", "スペキュラ強度 2"),
             new WFI18NTranslation("WAS", "Specular 2 Color", "スペキュラ色 2"),
             new WFI18NTranslation("WAS", "Specular 2 Smoothness", "滑らかさ 2"),
+            new WFI18NTranslation("WAR", "Sun Azimuth", "太陽の方角"),
+            new WFI18NTranslation("WAR", "Sun Altitude", "太陽の高度"),
+            new WFI18NTranslation("WAR", "Size", "サイズ"),
+            new WFI18NTranslation("WAR", "Base Pos", "位置"),
+            new WFI18NTranslation("WAR", "Hide Back", "後側を非表示"),
 
             // メニュー
             new WFI18NTranslation("Copy material", "コピー"),
             new WFI18NTranslation("Paste value", "貼り付け"),
             new WFI18NTranslation("Paste (without Textures)", "貼り付け (Texture除く)"),
             new WFI18NTranslation("Reset", "リセット"),
+
+            // 列挙体
+            new WFI18NTranslation("UnlitWF.BlendModeOVL.ALPHA", "アルファ合成"),
+            new WFI18NTranslation("UnlitWF.BlendModeOVL.ADD", "加算"),
+            new WFI18NTranslation("UnlitWF.BlendModeOVL.MUL", "乗算"),
+            new WFI18NTranslation("UnlitWF.BlendModeOVL.ADD_AND_SUB", "加算・減算"),
+            new WFI18NTranslation("UnlitWF.BlendModeOVL.SCREEN", "スクリーン"),
+            new WFI18NTranslation("UnlitWF.BlendModeOVL.OVERLAY", "オーバーレイ"),
+            new WFI18NTranslation("UnlitWF.BlendModeOVL.HARD_LIGHT", "ハードライト"),
+            new WFI18NTranslation("UnlitWF.BlendModeHL.ADD_AND_SUB", "加算・減算"),
+            new WFI18NTranslation("UnlitWF.BlendModeHL.ADD", "加算"),
+            new WFI18NTranslation("UnlitWF.BlendModeHL.MUL", "乗算"),
+            new WFI18NTranslation("UnlitWF.BlendModeES.ADD", "加算"),
+            new WFI18NTranslation("UnlitWF.BlendModeES.ALPHA", "アルファ合成"),
+            new WFI18NTranslation("UnlitWF.BlendModeES.LEGACY_ALPHA", "アルファ合成(旧タイプ)"),
+            new WFI18NTranslation("UnlitWF.BlendModeTR.ADD", "加算"),
+            new WFI18NTranslation("UnlitWF.BlendModeTR.ALPHA", "アルファ合成"),
+            new WFI18NTranslation("UnlitWF.BlendModeTR.ADD_AND_SUB", "加算・減算"),
+            new WFI18NTranslation("UnlitWF.SunSourceMode.AUTO", "自動"),
+            new WFI18NTranslation("UnlitWF.SunSourceMode.ONLY_DIRECTIONAL_LIT", "DirectionalLightのみ"),
+            new WFI18NTranslation("UnlitWF.SunSourceMode.ONLY_POINT_LIT", "PointLightのみ"),
+            new WFI18NTranslation("UnlitWF.SunSourceMode.CUSTOM_WORLD_DIR", "カスタム(ワールド方向)"),
+            new WFI18NTranslation("UnlitWF.SunSourceMode.CUSTOM_LOCAL_DIR", "カスタム(ローカル方向)"),
+            new WFI18NTranslation("UnlitWF.SunSourceMode.CUSTOM_WORLD_POS", "カスタム(ワールド座標)"),
 
             // その他のテキスト
             new WFI18NTranslation(WFMessageText.NewerVersion, "新しいバージョンがリリースされています。\n最新版: "),
@@ -626,8 +670,9 @@ namespace UnlitWF
             new WFI18NTranslation(WFMessageText.PlzLightmapStatic, "このマテリアルは Lightmap Static な MeshRenderer から使われているようです。\nライトマップを有効にしますか？"),
             new WFI18NTranslation(WFMessageText.PlzFixQueue, "半透明マテリアルのQueueが2500未満です。\nRenderQueueを修正しますか？"),
             new WFI18NTranslation(WFMessageText.PlzFixDoubleSidedGI, "マテリアルの DoubleSidedGI がチェックされていません。\nこのマテリアルは片面としてライトベイクされます。\nDoubleSidedGI を修正しますか？"),
-            new WFI18NTranslation(WFMessageText.PsAntiShadowMask, "アンチシャドウマスクにはアバターの顔を白く塗ったマスクテクスチャを指定してください。マスク反転をチェックすることでマテリアル全体を顔とみなすこともできます。"),
+            new WFI18NTranslation(WFMessageText.PlzQuestSupport, "このマテリアルは Quest 非対応シェーダを使用しています。"),
 
+            new WFI18NTranslation(WFMessageText.PsAntiShadowMask, "アンチシャドウマスクにはアバターの顔を白く塗ったマスクテクスチャを指定してください。マスク反転をチェックすることでマテリアル全体を顔とみなすこともできます。"),
             new WFI18NTranslation(WFMessageText.PsCapTypeMedian, "MEDIAN_CAPは灰色を基準とした加算＆減算合成を行うmatcapです"),
             new WFI18NTranslation(WFMessageText.PsCapTypeLight, "LIGHT_CAPは黒色を基準とした加算合成を行うmatcapです"),
             new WFI18NTranslation(WFMessageText.PsCapTypeShade, "SHADE_CAPは白色を基準とした乗算合成を行うmatcapです"),
@@ -877,6 +922,7 @@ namespace UnlitWF
         public static readonly string PlzLightmapStatic = "This material seems to be used by the Lightmap Static MeshRenderer.\nDo you want to enable Lightmap?";
         public static readonly string PlzFixQueue = "The Queue for the transparency material is less than 2500, do you want to fix the RenderQueue?";
         public static readonly string PlzFixDoubleSidedGI = "The material's DoubleSidedGI is unchecked.\nThis material will be lightbaked as single sided.\nDo you want to fix DoubleSidedGI?";
+        public static readonly string PlzQuestSupport = "This material uses a shader that does not support Quest.";
         public static readonly string PsAntiShadowMask = "In the Anti-Shadow Mask field, specify a mask texture with the avatar face painted white. You can also check the InvertMask checkbox to make the entire material a face.";
         public static readonly string PsCapTypeMedian = "MEDIAN_CAP is a matcap that performs gray-based additive and subtractive blending.";
         public static readonly string PsCapTypeLight = "LIGHT_CAP is a matcap that performs black-based additive blending.";

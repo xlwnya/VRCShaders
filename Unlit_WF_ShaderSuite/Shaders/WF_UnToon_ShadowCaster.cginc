@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -87,6 +87,12 @@
                 return float4(0, 0, 0, 0);
             }
         #endif
+
+        // ディゾルブの考慮
+        if (TGL_ON(_DSV_Enable) && _DSV_Dissolve < 1 - 0.05) {
+            discard;
+            return float4(0, 0, 0, 0);
+        }
 
         return frag_shadow_caster(i);
     }

@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -32,9 +32,10 @@ Shader "UnlitWF/WF_Water_Surface_Transparent_Refracted" {
             _AL_Source              ("[AL] Alpha Source", Float) = 0
         [NoScaleOffset]
             _AL_MaskTex             ("[AL] Alpha Mask Texture", 2D) = "white" {}
-        [Toggle(_)]
+        [ToggleUI]
             _AL_InvMaskVal          ("[AL] Invert Mask Value", Range(0, 1)) = 0
             _AL_Power               ("[AL] Power", Range(0, 2)) = 1.0
+            _Cutoff                 ("[AL] Cutoff Threshold", Range(0, 1)) = 0.05
             _AL_Fresnel             ("[AL] Fresnel Power", Range(0, 2)) = 0
         [Enum(OFF,0,ON,1)]
             _AL_ZWrite              ("[AL] ZWrite", int) = 0
@@ -44,8 +45,7 @@ Shader "UnlitWF/WF_Water_Surface_Transparent_Refracted" {
             _CRF_RefractiveIndex    ("[CRF] Refractive Index", Range(1.0, 3.0)) = 1.33
             _CRF_Distance           ("[CRF] Distance", Range(0, 10)) = 1.0
             _CRF_Tint               ("[CRF] Tint Color", Color) = (0.5, 0.5, 0.5)
-        [WF_FixFloat(1.0)]
-            _CRF_BlendNormal        ("[CRF] Blend Normal", Range(0, 1)) = 1.0
+            _CRF_BlendNormal        ("[CRF] Blend Normal", Range(0, 1)) = 0.1
 
         [WFHeaderToggle(Distance Fade)]
             _WAD_Enable             ("[WAD] Enable", Float) = 0
@@ -121,7 +121,7 @@ Shader "UnlitWF/WF_Water_Surface_Transparent_Refracted" {
             _AO_Brightness          ("[AO] Brightness", Range(-1, 1)) = 0
 
         [WFHeader(Lit Advance)]
-        [Enum(AUTO,0,ONLY_DIRECTIONAL_LIT,1,ONLY_POINT_LIT,2,CUSTOM_WORLD_DIR,3,CUSTOM_LOCAL_DIR,4,CUSTOM_WORLD_POS,5)]
+        [WF_Enum(UnlitWF.SunSourceMode)]
             _GL_LightMode           ("Sun Source", Float) = 0
             _GL_CustomAzimuth       ("Custom Sun Azimuth", Range(0, 360)) = 0
             _GL_CustomAltitude      ("Custom Sun Altitude", Range(-90, 90)) = 45
@@ -130,7 +130,7 @@ Shader "UnlitWF/WF_Water_Surface_Transparent_Refracted" {
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/12/17", Float) = 0
+            _CurrentVersion         ("2023/02/25", Float) = 0
         [HideInInspector]
         [WF_FixFloat(0.0)]
             _FallBack               ("UnlitWF/WF_Water_Surface_Transparent", Float) = 0
@@ -147,6 +147,7 @@ Shader "UnlitWF/WF_Water_Surface_Transparent_Refracted" {
 
             Cull [_CullMode]
             ZWrite [_AL_ZWrite]
+            Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
 
             CGPROGRAM
 
@@ -157,6 +158,7 @@ Shader "UnlitWF/WF_Water_Surface_Transparent_Refracted" {
 
             #define _WF_ALPHA_FRESNEL
             #define _WF_AO_ONLY_LMAP
+            #define _WF_WATER_CUTOUT
 
             #pragma shader_feature_local _ _GL_AUTO_ENABLE _GL_ONLYDIR_ENABLE _GL_ONLYPOINT_ENABLE _GL_WSDIR_ENABLE _GL_LSDIR_ENABLE _GL_WSPOS_ENABLE
             #pragma shader_feature_local _ _WAM_ONLY2ND_ENABLE
@@ -176,7 +178,7 @@ Shader "UnlitWF/WF_Water_Surface_Transparent_Refracted" {
             #pragma multi_compile_instancing
             #pragma multi_compile _ _WF_EDITOR_HIDE_LMAP
 
-            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE SHADOWS_SHADOWMASK
+            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE
 
             #define _WF_WATER_SURFACE
             #include "WF_Water.cginc"

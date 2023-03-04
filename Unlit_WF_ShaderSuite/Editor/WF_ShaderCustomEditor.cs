@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -91,8 +91,12 @@ namespace UnlitWF
             new MinMaxSliderPropertyHook("_LME_MinDist", "_LME_MaxDist", "[LME] FadeOut Distance"),
             new MinMaxSliderPropertyHook("_TS_MinDist", "_TS_MaxDist", "[TS] FadeOut Distance"),
             new MinMaxSliderPropertyHook("_DFD_MinDist", "_DFD_MaxDist", "[DFD] Fade Distance"),
+            new MinMaxSliderPropertyHook("_WAR_MinDist", "_WAR_MaxDist", "[WAR] FadeOut Distance"),
             new MinMaxSliderPropertyHook("_ES_AU_MinValue", "_ES_AU_MaxValue", "[ES] Emission Multiplier"),
             new MinMaxSliderPropertyHook("_ES_AU_MinThreshold", "_ES_AU_MaxThreshold", "[ES] Threshold"),
+
+            // ZWrite
+            new ZWriteFrontBackPropertyHook("_AL_ZWrite", "_AL_ZWriteBack"),
 
             // _OL_CustomParam1のディスプレイ名をカスタマイズ
             new CustomPropertyHook("_OVL_CustomParam1", ctx => {
@@ -229,8 +233,6 @@ namespace UnlitWF
 
         static class Styles
         {
-            public static readonly Texture2D infoIcon = EditorGUIUtility.Load("icons/console.infoicon.png") as Texture2D;
-            public static readonly Texture2D warnIcon = EditorGUIUtility.Load("icons/console.warnicon.png") as Texture2D;
             public static readonly Texture2D menuTex = LoadTextureByFileName("wf_icon_menu");
         }
 
@@ -346,17 +348,8 @@ namespace UnlitWF
 
             // 情報(トップ)
             OnGuiSub_ShowCurrentShaderName(materialEditor, false);
-            // マイグレーションHelpBox
-            OnGUISub_MigrationHelpBox(materialEditor);
-
-            // Transparent RenderQueue対策HelpBox
-            OnGUISub_TransparentQueueHelpBox(materialEditor);
-            // Batching Static対策HelpBox
-            OnGUISub_BatchingStaticHelpBox(materialEditor);
-            // Lightmap Static対策HelpBox
-            OnGUISub_LightmapStaticHelpBox(materialEditor);
-            // DoubleSidedGI対策HelpBox
-            OnGUISub_DoubleSidedGIHelpBox(materialEditor);
+            // バリデーション
+            OnGUISub_MaterialValidation(materialEditor);
 
             // 現在無効なラベルを保持するリスト
             var disable = new HashSet<string>();
@@ -482,10 +475,10 @@ namespace UnlitWF
                 GUILayout.Label(currentVersion);
 
                 // もしシェーダ名辞書にあって新しいバージョンがリリースされているならばボタンを表示
-                if (snm != null && WFCommonUtility.IsOlderShaderVersion(currentVersion))
+                if (snm != null && WFCommonUtility.IsOlderShaderVersion(currentVersion) && !WFCommonUtility.IsInSpecialProject())
                 {
                     var message = WFI18N.Translate(WFMessageText.NewerVersion) + WFCommonUtility.GetLatestVersion()?.latestVersion;
-                    if (materialEditor.HelpBoxWithButton(new GUIContent(message, Styles.infoIcon), new GUIContent("Go")))
+                    if (materialEditor.HelpBoxWithButton(ToolCommon.GetMessageContent(MessageType.Info, message), new GUIContent("Go")))
                     {
                         WFCommonUtility.OpenDownloadPage();
                     }
@@ -504,82 +497,39 @@ namespace UnlitWF
                 // 一時的にフィールド幅を変更
                 EditorGUIUtility.labelWidth = 0;
 
+                // バリアントリストを作成
+                WFVariantList lists = WFShaderNameDictionary.CreateVariantList(snm);
+
                 // ファミリー
                 {
-                    var families = WFShaderNameDictionary.GetFamilyList();
-                    // ラベル文字列を作成
-                    var labels = families.Select(nm => nm == null ? "" : nm.Familly).ToArray();
-                    int idx = Array.IndexOf(labels, snm.Familly);
-
                     EditorGUI.BeginChangeCheck();
-                    int select = EditorGUILayout.Popup("Family", idx, labels);
-                    if (EditorGUI.EndChangeCheck() && idx != select)
+                    int idxFamily = EditorGUILayout.Popup("Family", lists.idxFamily, lists.LabelFamilyList);
+                    if (EditorGUI.EndChangeCheck() && lists.idxFamily != idxFamily)
                     {
-                        WFCommonUtility.ChangeShader(families[select].Name, targets);
+                        WFCommonUtility.ChangeShader(lists.familyList[idxFamily].Name, targets);
                     }
                 }
                 // バリアント
                 {
-                    // 同じ Variant のシェーダをリストに
-                    var variants = WFShaderNameDictionary.GetVariantList(snm, out var other);
-                    // その他の Variant もリストに追加する
-                    if (0 < other.Count)
-                    {
-                        variants.Add(null);
-                        variants.AddRange(other.Distinct(new WFShaderNameVariantComparer()));
-                    }
-
-                    // ラベル文字列を作成
-                    var labels = variants.Select(nm => nm == null ? "" : nm.Variant).ToArray();
-                    int idx = Array.IndexOf(labels, snm.Variant);
-
                     EditorGUI.BeginChangeCheck();
-                    int select = EditorGUILayout.Popup("Variant", idx, labels);
-                    if (EditorGUI.EndChangeCheck() && idx != select)
+                    int idxVariant = EditorGUILayout.Popup("Variant", lists.idxVariant, lists.LabelVariantList);
+                    if (EditorGUI.EndChangeCheck() && lists.idxVariant != idxVariant)
                     {
-                        WFCommonUtility.ChangeShader(variants[select].Name, targets);
+                        WFCommonUtility.ChangeShader(lists.variantList[idxVariant].Name, targets);
                     }
                 }
                 // Render Type
                 {
-                    // 同じ RenderType のシェーダをリストに
-                    var variants = WFShaderNameDictionary.GetRenderTypeList(snm, out List<WFShaderName> other);
-                    // その他の RenderType もリストに追加する
-                    if (0 < other.Count)
-                    {
-                        variants.Add(null);
-                        variants.AddRange(other.Distinct(new WFShaderNameRenderTypeComparer()));
-                    }
-
-                    var labels = variants.Select(nm => nm == null ? "" : nm.RenderType).ToArray();
-                    int idx = Array.IndexOf(labels, snm.RenderType);
-
                     EditorGUI.BeginChangeCheck();
-                    int select = EditorGUILayout.Popup("RenderType", idx, labels);
-                    if (EditorGUI.EndChangeCheck() && idx != select)
+                    int idxRenderType = EditorGUILayout.Popup("RenderType", lists.idxRenderType, lists.LabelRenderTypeList);
+                    if (EditorGUI.EndChangeCheck() && lists.idxRenderType != idxRenderType)
                     {
-                        WFCommonUtility.ChangeShader(variants[select].Name, targets);
+                        WFCommonUtility.ChangeShader(lists.renderTypeList[idxRenderType].Name, targets);
                     }
                 }
 
                 // フィールド幅を戻す
                 materialEditor.SetDefaultGUIWidths();
-            }
-        }
-
-        private void OnGUISub_MigrationHelpBox(MaterialEditor materialEditor)
-        {
-            var mats = WFCommonUtility.AsMaterials(materialEditor.targets);
-
-            if (WFMaterialCache.instance.IsOldMaterial(mats))
-            {
-                var message = WFI18N.Translate(WFMessageText.PlzMigration);
-
-                if (materialEditor.HelpBoxWithButton(new GUIContent(message, Styles.warnIcon), new GUIContent("Fix Now")))
-                {
-                    // 名称を全て変更
-                    WFMaterialEditUtility.MigrationMaterial(mats);
-                }
             }
         }
 
@@ -673,186 +623,24 @@ namespace UnlitWF
             WFEditorPrefs.MenuToBottom = EditorGUILayout.Toggle("Menu To Bottom", WFEditorPrefs.MenuToBottom);
         }
 
-        private static void OnGUISub_BatchingStaticHelpBox(MaterialEditor materialEditor)
+        private static void OnGUISub_MaterialValidation(MaterialEditor materialEditor)
         {
-            // 現在のシェーダが DisableBatching == False のとき以外は何もしない (Batching されないので)
-            var target = materialEditor.target as Material;
-            if (target == null || !target.GetTag("DisableBatching", false, "False").Equals("False", StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-            // ターゲットが設定用プロパティをどちらも持っていないならば何もしない
-            if (!target.HasProperty("_GL_DisableBackLit") && !target.HasProperty("_GL_DisableBasePos"))
-            {
-                return;
-            }
-            // 現在のシェーダ
-            var shader = target.shader;
-
-            // 現在編集中のマテリアルの配列
             var targets = WFCommonUtility.AsMaterials(materialEditor.targets);
-            // 現在編集中のマテリアルのうち、Batching Static のときにオンにしたほうがいい設定がオフになっているマテリアル
-            var allNonStaticMaterials = targets.Where(mat => mat.GetInt("_GL_DisableBackLit") == 0 || mat.GetInt("_GL_DisableBasePos") == 0).ToArray();
-
-            if (allNonStaticMaterials.Length == 0)
+            foreach (var advice in WFMaterialValidators.ValidateAll(targets))
             {
-                return;
-            }
-
-            var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-            // 現在のシーンにある BatchingStatic の付いた MeshRenderer が使っているマテリアルのうち、このShaderGUIが扱うマテリアルの配列
-            var allStaticMaterialsInScene = scene.GetRootGameObjects()
-                .SelectMany(go => go.GetComponentsInChildren<MeshRenderer>(true))
-                .Where(mf => GameObjectUtility.AreStaticEditorFlagsSet(mf.gameObject, StaticEditorFlags.BatchingStatic))
-                .SelectMany(mf => mf.sharedMaterials)
-                .Where(mat => mat != null && mat.shader == shader)
-                .ToArray();
-
-            // Batching Static の付いているマテリアルが targets 内にあるならば警告
-            if (allNonStaticMaterials.Any(mat => allStaticMaterialsInScene.Contains(mat)))
-            {
-
-                var message = WFI18N.Translate(WFMessageText.PlzBatchingStatic);
-
-                if (materialEditor.HelpBoxWithButton(new GUIContent(message, Styles.infoIcon), new GUIContent("Fix Now")))
+                if (advice.action != null)
                 {
-                    Undo.RecordObjects(allNonStaticMaterials, "Fix BatchingStatic Materials");
-                    // _GL_DisableBackLit と _GL_DisableBasePos をオンにする
-                    foreach (var mat in allNonStaticMaterials)
+                    // 修正 action ありの場合はボタン付き
+                    var messageContent = ToolCommon.GetMessageContent(advice.messageType, advice.message);
+                    if (materialEditor.HelpBoxWithButton(messageContent, new GUIContent("Fix Now")))
                     {
-                        mat.SetInt("_GL_DisableBackLit", 1);
-                        mat.SetInt("_GL_DisableBasePos", 1);
+                        advice.action();
                     }
                 }
-            }
-        }
-
-        private static void OnGUISub_LightmapStaticHelpBox(MaterialEditor materialEditor)
-        {
-            // ターゲットが設定用プロパティを持っていないならば何もしない
-            var target = materialEditor.target as Material;
-            if (target == null || !target.HasProperty("_AO_Enable") || !target.HasProperty("_AO_UseLightMap"))
-            {
-                return;
-            }
-            // 現在のシェーダ
-            var shader = target.shader;
-
-            // 現在編集中のマテリアルの配列
-            var targets = WFCommonUtility.AsMaterials(materialEditor.targets);
-            // 現在編集中のマテリアルのうち、Lightmap Static のときにオンにしたほうがいい設定がオフになっているマテリアル
-            var allNonStaticMaterials = targets.Where(mat => mat.GetInt("_AO_Enable") == 0 || mat.GetInt("_AO_UseLightMap") == 0).ToArray();
-
-            if (allNonStaticMaterials.Length == 0)
-            {
-                return;
-            }
-
-            var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-            // 現在のシーンにある LightmapStatic の付いた MeshRenderer が使っているマテリアルのうち、このShaderGUIが扱うマテリアルの配列
-            var allStaticMaterialsInScene = scene.GetRootGameObjects()
-                .SelectMany(go => go.GetComponentsInChildren<MeshRenderer>(true))
-#if UNITY_2019_1_OR_NEWER
-                .Where(mf => GameObjectUtility.AreStaticEditorFlagsSet(mf.gameObject, StaticEditorFlags.ContributeGI))
-                .Where(mf => mf.receiveGI == ReceiveGI.Lightmaps)
-                .Where(mf => 0 < mf.scaleInLightmap) // Unity2018では見えない
-#else
-                .Where(mf => GameObjectUtility.AreStaticEditorFlagsSet(mf.gameObject, StaticEditorFlags.LightmapStatic))
-#endif
-                .SelectMany(mf => mf.sharedMaterials)
-                .Where(mat => mat != null && mat.shader == shader)
-                .ToArray();
-
-            // Lightmap Static の付いているマテリアルが targets 内にあるならば警告
-            if (allNonStaticMaterials.Any(mat => allStaticMaterialsInScene.Contains(mat)))
-            {
-
-                var message = WFI18N.Translate(WFMessageText.PlzLightmapStatic);
-
-                if (materialEditor.HelpBoxWithButton(new GUIContent(message, Styles.infoIcon), new GUIContent("Fix Now")))
+                else
                 {
-                    Undo.RecordObjects(allNonStaticMaterials, "Fix LightmapStatic Materials");
-                    // _AO_Enable と _AO_UseLightMap をオンにする
-                    foreach (var mat in allNonStaticMaterials)
-                    {
-                        mat.SetInt("_AO_Enable", 1);
-                        mat.SetInt("_AO_UseLightMap", 1);
-                    }
-                }
-            }
-        }
-
-        private static void OnGUISub_DoubleSidedGIHelpBox(MaterialEditor materialEditor)
-        {
-            // ターゲットが設定用プロパティを持っていないならば何もしない
-            var target = materialEditor.target as Material;
-            if (target == null)
-            {
-                return;
-            }
-            // 現在のシェーダ
-            var shader = target.shader;
-
-            // 現在編集中のマテリアルの配列
-            var targets = WFCommonUtility.AsMaterials(materialEditor.targets);
-            // 現在編集中のマテリアルのうち、DoubleSidedGI が付いていない、かつ Transparent か TransparentCutout なマテリアル
-            var allNonStaticMaterials = targets.Where(mat => !mat.doubleSidedGI)
-                .Where(mat => WFAccessor.IsMaterialRenderType(mat, "Transparent", "TransparentCutout"))
-                .ToArray();
-
-            if (allNonStaticMaterials.Length == 0)
-            {
-                return;
-            }
-
-            var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-            // 現在のシーンにある LightmapStatic の付いた MeshRenderer が使っているマテリアルのうち、このShaderGUIが扱うマテリアルの配列
-            var allStaticMaterialsInScene = scene.GetRootGameObjects()
-                .SelectMany(go => go.GetComponentsInChildren<MeshRenderer>(true))
-#if UNITY_2019_1_OR_NEWER
-                .Where(mf => GameObjectUtility.AreStaticEditorFlagsSet(mf.gameObject, StaticEditorFlags.ContributeGI)) // ここではReceiveGIがLightProbesも扱う
-#else
-                .Where(mf => GameObjectUtility.AreStaticEditorFlagsSet(mf.gameObject, StaticEditorFlags.LightmapStatic))
-#endif
-                .SelectMany(mf => mf.sharedMaterials)
-                .Where(mat => mat != null && mat.shader == shader)
-                .ToArray();
-
-            // Lightmap Static の付いているマテリアルが targets 内にあるならば警告
-            if (allNonStaticMaterials.Any(mat => allStaticMaterialsInScene.Contains(mat)))
-            {
-                var message = WFI18N.Translate(WFMessageText.PlzFixDoubleSidedGI);
-
-                if (materialEditor.HelpBoxWithButton(new GUIContent(message, Styles.infoIcon), new GUIContent("Fix Now")))
-                {
-                    Undo.RecordObjects(allNonStaticMaterials, "Fix DoubleSidedGI");
-                    // DoubleSidedGI をオンにする
-                    foreach (var mat in allNonStaticMaterials)
-                    {
-                        mat.doubleSidedGI = true;
-                    }
-                }
-            }
-        }
-
-        private static void OnGUISub_TransparentQueueHelpBox(MaterialEditor materialEditor)
-        {
-            // 現在編集中のマテリアルの配列のうち、RenderType が Transparent なのに 2500 未満で描画しているもの
-            var targets = WFCommonUtility.AsMaterials(materialEditor.targets)
-                .Where(mat => WFAccessor.IsMaterialRenderType(mat, "Transparent") && mat.renderQueue < 2500).ToArray();
-
-            // RenderGeometryTransparentでないものがある場合は
-            if (0 < targets.Length)
-            {
-                var message = WFI18N.Translate(WFMessageText.PlzFixQueue);
-
-                if (materialEditor.HelpBoxWithButton(new GUIContent(message, Styles.warnIcon), new GUIContent("Fix Now")))
-                {
-                    Undo.RecordObjects(targets, "Fix RenderQueue Materials");
-                    foreach (var mat in targets)
-                    {
-                        mat.renderQueue = -1;
-                    }
+                    // 修正 action なしの場合はボタンなし
+                    EditorGUILayout.HelpBox(advice.message, advice.messageType, true);
                 }
             }
         }
@@ -1006,6 +794,8 @@ namespace UnlitWF
         /// <param name="alwaysOn">常時trueにするならばtrue、デフォルトはfalse</param>
         public static Rect DrawShurikenStyleHeader(Rect position, string text, GenericMenu menu = null)
         {
+            var content = new GUIContent(text);
+
             // SurikenStyleHeader
             var style = new GUIStyle("ShurikenModuleTitle");
             SetStyleFont(style, EditorStyles.boldLabel.font, s => s + 2, FontStyle.Bold);
@@ -1014,12 +804,11 @@ namespace UnlitWF
             // Draw
             position.y += 8;
             position = EditorGUI.IndentedRect(position);
-            GUI.Box(position, text, style);
+            GUI.Box(position, content, style);
 
             // ヘルプテキスト
-            var helpText = WFI18N.Translate(text);
-            if (!string.IsNullOrWhiteSpace(helpText) && helpText != text) {
-                var titleSize = style.CalcSize(new GUIContent(text));
+            if (WFI18N.TryTranslate(text, out var helpText)) {
+                var titleSize = style.CalcSize(content);
                 var rect = new Rect(position.x + titleSize.x + 24, position.y, position.width - titleSize.x - 24, 16f);
                 var style2 = new GUIStyle(EditorStyles.label);
                 SetStyleFont(style2, null, s => style.fontSize - 1, FontStyle.Normal);
@@ -1191,6 +980,23 @@ namespace UnlitWF
                 {
                     propMax.floatValue = maxValue;
                 }
+            }
+        }
+
+        public static void DrawZWriteProperty(MaterialEditor materialEditor, GUIContent label, MaterialProperty front, MaterialProperty back)
+        {
+            var value = front.floatValue < 0.001 ? 0 : back.floatValue < 0.001 ? 1 : 2;
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = front.hasMixedValue || back.hasMixedValue;
+
+            value = EditorGUILayout.Popup(label, value, new string[] { "OFF", "ON", "TwoSided" });
+
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck())
+            {
+                front.floatValue = value != 0 ? 1 : 0;
+                back.floatValue = value == 2 ? 1 : 0;
             }
         }
 
@@ -1452,6 +1258,51 @@ namespace UnlitWF
                 }
                 context.custom = true;
                 // 相方の側は何もしない
+            }
+        }
+
+        /// <summary>
+        /// ZWrite と ZWriteBack をひとつのプロパティとして表示する
+        /// </summary>
+        class ZWriteFrontBackPropertyHook : AbstractPropertyHook
+        {
+            private readonly string frontName;
+            private readonly string backName;
+            private readonly string displayName;
+
+            public ZWriteFrontBackPropertyHook(string frontName, string backName, string displayName = null) : base(frontName + "|" + backName)
+            {
+                this.frontName = frontName;
+                this.backName = backName;
+                this.displayName = displayName;
+            }
+
+            protected override void OnBeforeProp(PropertyGUIContext context)
+            {
+                if (context.hidden)
+                {
+                    return;
+                }
+                if (frontName == context.current.name)
+                {
+                    MaterialProperty another = FindProperty(backName, context.all, false);
+                    if (another != null)
+                    {
+                        var display = string.IsNullOrWhiteSpace(displayName) ? context.guiContent : WFI18N.GetGUIContent(displayName);
+                        DrawZWriteProperty(context.editor, display, context.current, another);
+                        context.custom = true;
+                    }
+                    else
+                    {
+                        // 相方がいない場合は単独で表示する
+                        context.custom = false;
+                    }
+                }
+                else
+                {
+                    // 相方の側は何もしない
+                    context.custom = true;
+                }
             }
         }
 
@@ -1861,70 +1712,223 @@ namespace UnlitWF
         }
     }
 
-    #endregion
-
-    public class WFMaterialCache : ScriptableSingleton<WFMaterialCache>
+    /// <summary>
+    /// 常に非表示のMaterialPropertyDrawer
+    /// </summary>
+    internal class MaterialWF_HidePropDrawer : MaterialPropertyDrawer
     {
-        private readonly WeakRefCache<Material> oldMaterialVersionCache = new WeakRefCache<Material>();
-        private readonly WeakRefCache<Material> newMaterialVersionCache = new WeakRefCache<Material>();
-
-        public void OnEnable()
+        public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
         {
-            Undo.undoRedoPerformed += OnUndoOrRedo;
+            return 0;
         }
 
-        public void OnDestroy()
+        public override void OnGUI(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
         {
-            Undo.undoRedoPerformed -= OnUndoOrRedo;
-        }
-
-        private void OnUndoOrRedo()
-        {
-            // undo|redo のタイミングではキャッシュが当てにならないのでクリアする
-            oldMaterialVersionCache.Clear();
-            newMaterialVersionCache.Clear();
-        }
-
-        public bool IsOldMaterial(Material[] mats)
-        {
-            bool result = false;
-            foreach (Material mat in mats)
-            {
-                if (mat == null)
-                {
-                    continue;
-                }
-                if (newMaterialVersionCache.Contains(mat))
-                {
-                    continue;
-                }
-                if (oldMaterialVersionCache.Contains(mat))
-                {
-                    result |= true;
-                    return true;
-                }
-                bool old = WFMaterialEditUtility.ExistsNeedsMigration(mat);
-                if (old)
-                {
-                    oldMaterialVersionCache.Add(mat);
-                }
-                else
-                {
-                    newMaterialVersionCache.Add(mat);
-                }
-                result |= old;
-            }
-            return result;
-        }
-
-        public void ResetOldMaterialTable(params Material[] values)
-        {
-            var mats = values.Where(mat => mat != null).ToArray();
-            oldMaterialVersionCache.RemoveAll(mats);
-            newMaterialVersionCache.RemoveAll(mats);
         }
     }
 
+    internal class MaterialWF_EnumDrawer : MaterialPropertyDrawer
+    {
+        private readonly string enumName;
+        private readonly string[] names;
+        private readonly int[] values;
+
+        public MaterialWF_EnumDrawer(string enumName)
+        {
+            this.enumName = enumName;
+            ReadEnumValue(enumName, out this.names, out this.values);
+        }
+
+        public MaterialWF_EnumDrawer(string enumName, string e1) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1);
+        }
+        public MaterialWF_EnumDrawer(string enumName, string e1, string e2) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1, e2);
+        }
+        public MaterialWF_EnumDrawer(string enumName, string e1, string e2, string e3) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1, e2, e3);
+        }
+        public MaterialWF_EnumDrawer(string enumName, string e1, string e2, string e3, string e4) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1, e2, e3, e4);
+        }
+        public MaterialWF_EnumDrawer(string enumName, string e1, string e2, string e3, string e4, string e5) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1, e2, e3, e4, e5);
+        }
+        public MaterialWF_EnumDrawer(string enumName, string e1, string e2, string e3, string e4, string e5, string e6) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1, e2, e3, e4, e5, e6);
+        }
+        public MaterialWF_EnumDrawer(string enumName, string e1, string e2, string e3, string e4, string e5, string e6, string e7) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1, e2, e3, e4, e5, e6, e7);
+        }
+        public MaterialWF_EnumDrawer(string enumName, string e1, string e2, string e3, string e4, string e5, string e6, string e7, string e8) : this(enumName)
+        {
+            FilterEnumValue(ref this.names, ref this.values, e1, e2, e3, e4, e5, e6, e7, e8);
+        }
+
+        private static void ReadEnumValue(string enumName, out string[] names, out int[] values)
+        {
+            var loadedTypes = GetTypesDerivedFrom(typeof(Enum));
+            try
+            {
+                var enumType = loadedTypes.FirstOrDefault(x => x.Name == enumName || x.FullName == enumName);
+                var enumNames = Enum.GetNames(enumType);
+                names = new string[enumNames.Length];
+                for (int i = 0; i < enumNames.Length; ++i)
+                {
+                    names[i] = enumNames[i];
+                }
+                var enumVals = Enum.GetValues(enumType);
+                values = new int[enumVals.Length];
+                for (var i = 0; i < enumVals.Length; ++i)
+                {
+                    values[i] = (int)enumVals.GetValue(i);
+                }
+            }
+            catch (Exception)
+            {
+                Debug.LogWarningFormat("Failed to create MaterialEnum, enum {0} not found", enumName);
+                throw;
+            }
+        }
+
+        private static IEnumerable<Type> GetTypesDerivedFrom(Type type)
+        {
+#if UNITY_2019_1_OR_NEWER
+            return TypeCache.GetTypesDerivedFrom(type);
+#else
+            var types = new List<Type>();
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            foreach (var assembly in assemblies)
+            {
+                Type[] allAssemblyTypes;
+                try
+                {
+                    allAssemblyTypes = assembly.GetTypes();
+                }
+                catch (System.Reflection.ReflectionTypeLoadException e)
+                {
+                    allAssemblyTypes = e.Types;
+                }
+
+                var typesInAssembly = allAssemblyTypes.Where(t => !t.IsAbstract && t.IsSubclassOf(type));
+                types.AddRange(typesInAssembly);
+            }
+            return types;
+#endif
+        }
+
+        private static void FilterEnumValue(ref string[] names, ref int[] values, params string[] actual)
+        {
+            var names2 = new List<string>();
+            var values2 = new List<int>();
+            foreach(var nm in actual)
+            {
+                var idx = ArrayUtility.IndexOf(names, nm);
+                if (0 <= idx)
+                {
+                    names2.Add(names[idx]);
+                    values2.Add(values[idx]);
+                }
+            }
+            names = names2.ToArray();
+            values = values2.ToArray();
+        }
+
+        public override void OnGUI(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
+        {
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+
+            var value = (int)prop.floatValue;
+            int selectedIndex = -1;
+            for (var index = 0; index < values.Length; index++)
+            {
+                if (values[index] == value)
+                {
+                    selectedIndex = index;
+                    break;
+                }
+            }
+
+            var names = Translate(this.names);
+            var selIndex = EditorGUI.Popup(position, label, selectedIndex, names);
+
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck())
+            {
+                prop.floatValue = (float)values[selIndex];
+            }
+        }
+
+        private GUIContent[] Translate(string[] names)
+        {
+            var result = new GUIContent[names.Length];
+            for(int i = 0; i < result.Length; i++)
+            {
+                var key = enumName + "." + names[i];
+                if (WFI18N.TryTranslate(key, out var after))
+                {
+                    result[i] = new GUIContent(after);
+                }
+                else
+                {
+                    result[i] = new GUIContent(names[i]);
+                }
+            }
+            return result;
+        }
+    }
+
+#endregion
+
+    public enum BlendModeOVL
+    {
+        ALPHA = 0,
+        ADD = 1,
+        MUL = 2,
+        ADD_AND_SUB = 3,
+        SCREEN = 4, 
+        OVERLAY = 5,
+        HARD_LIGHT = 6
+    }
+
+    public enum BlendModeHL
+    {
+        ADD_AND_SUB = 0,
+        ADD = 1,
+        MUL = 2,
+    }
+    
+    public enum BlendModeES
+    {
+        ADD = 0,
+        ALPHA = 2,
+        LEGACY_ALPHA = 1,
+    }
+
+    public enum BlendModeTR
+    {
+        ADD = 2,
+        ALPHA = 1,
+        ADD_AND_SUB = 0,
+    }
+
+    public enum SunSourceMode
+    {
+        AUTO = 0, 
+        ONLY_DIRECTIONAL_LIT = 1,
+        ONLY_POINT_LIT = 2,
+        CUSTOM_WORLD_DIR = 3,
+        CUSTOM_LOCAL_DIR = 4,
+        CUSTOM_WORLD_POS = 5
+    }
 }
 
 #endif

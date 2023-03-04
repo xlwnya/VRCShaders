@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -26,7 +26,7 @@ Shader "UnlitWF/WF_Water_Caustics_Addition" {
 
         [WFHeader(Water)]
             _WaterLevel             ("[WA] Water Level (World Y Coord)", Float) = 0
-        [Toggle(_)]
+        [ToggleUI]
             _HideCausticsAbove      ("[WA] Hide Caustics above water", Float) = 0
 
         [WFHeaderToggle(Waving 1)]
@@ -65,7 +65,7 @@ Shader "UnlitWF/WF_Water_Caustics_Addition" {
 
         [HideInInspector]
         [WF_FixFloat(0.0)]
-            _CurrentVersion         ("2022/12/17", Float) = 0
+            _CurrentVersion         ("2023/02/25", Float) = 0
         [HideInInspector]
         [WF_FixFloat(0.0)]
             _QuestSupported         ("True", Float) = 0
@@ -80,7 +80,7 @@ Shader "UnlitWF/WF_Water_Caustics_Addition" {
 
             Cull [_CullMode]
             ZWrite OFF
-            Blend One One
+            Blend One One, One OneMinusSrcAlpha
 
             CGPROGRAM
 
@@ -101,7 +101,7 @@ Shader "UnlitWF/WF_Water_Caustics_Addition" {
             #pragma multi_compile_instancing
             #pragma multi_compile _ _WF_EDITOR_HIDE_LMAP
 
-            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE SHADOWS_SHADOWMASK
+            #pragma skip_variants SHADOWS_SCREEN SHADOWS_CUBE
 
             #define _WF_WATER_CAUSTICS
             #include "WF_Water.cginc"

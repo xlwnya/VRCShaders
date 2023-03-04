@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -125,6 +125,7 @@
 
     // -------------------------
 
+    #define _WF_DEFINED_LBE
     float           _LBE_Enable;
     float           _LBE_IndirectChroma;
     float           _LBE_IndirectMultiplier;
@@ -345,6 +346,17 @@
 
     // -------------------------
 
+    float           _DSV_Enable; // ShadowCasterで参照するため FEATURE_TGL ではなく float で定義
+    float           _DSV_Dissolve;
+    float           _DSV_Invert;
+    float4          _DSV_SparkColor;
+    float           _DSV_SparkWidth;
+    DECL_MAIN_TEX2D(_DSV_CtrlTex);
+    float4          _DSV_CtrlTex_ST;
+    float           _DSV_TexIsSRGB;
+
+    // -------------------------
+
 #ifndef _WF_MOBILE
     FEATURE_TGL    (_TFG_Enable);
     float4          _TFG_Color;
@@ -363,7 +375,6 @@
     float           _CRF_Distance;
     float3          _CRF_Tint;
     float           _CRF_BlendNormal;
-    float           _CRF_BlendNormal2;
 #endif
 
     // -------------------------

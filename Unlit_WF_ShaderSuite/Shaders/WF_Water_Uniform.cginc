@@ -1,7 +1,7 @@
 ﻿/*
  *  The MIT License
  *
- *  Copyright 2018-2022 whiteflare.
+ *  Copyright 2018-2023 whiteflare.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  *  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -38,6 +38,8 @@
     DECL_MAIN_TEX2D     (_WAV_HeightMap_3);
     DECL_MAIN_TEX2D     (_WAV_CausticsTex_3);
 
+    DECL_MAIN_TEX2D     (_WAR_CookieTex);
+
     DECL_MAIN_TEXCUBE   (_WAM_Cubemap);
 
 #ifdef _WF_PB_GRAB_TEXTURE
@@ -52,6 +54,7 @@
     float4          _Color;
     float4          _Color2;
     float           _ShadowPower;
+    float           _Cutoff;
 
     float           _WaterLevel;
     float           _WaterTransparency;
@@ -91,7 +94,6 @@
     uint            _AL_Source;
     float           _AL_Power;
     float           _AL_Fresnel;
-    float           _AL_AlphaToMask;
     float           _AL_Z_Offset;
     float           _AL_InvMaskVal;
 
@@ -148,7 +150,6 @@
     float           _CRF_Distance;
     float3          _CRF_Tint;
     float           _CRF_BlendNormal;
-    float           _CRF_BlendNormal2;
 #endif
 
     // -------------------------
@@ -159,5 +160,19 @@
     float           _WAD_MaxDist;
     float           _WAD_Power;
     float           _WAD_BackShadow;
+
+    // -------------------------
+
+    FEATURE_TGL    (_WAR_Enable);
+    float           _WAR_Power;
+    float           _WAR_Azimuth;
+    float           _WAR_Altitude;
+    float3          _WAR_BasePosOffset;
+    float           _WAR_CullBack;
+    float           _WAR_Size;
+    float           _WAR_Feather;
+    float           _WAR_BlendNormal;
+    float           _WAR_MinDist;
+    float           _WAR_MaxDist;
 
 #endif
